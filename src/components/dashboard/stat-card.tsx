@@ -1,6 +1,9 @@
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { LucideIcon } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
+import { useSpring, animated } from '@react-spring/web';
 
 interface StatCardProps {
   title: string;
@@ -11,12 +14,26 @@ interface StatCardProps {
   loading?: boolean;
 }
 
-export function StatCard({ title, value, icon: Icon, description, currency = 'USD', loading }: StatCardProps) {
-  const formattedValue = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-  }).format(value);
+const AnimatedNumber = ({ value, currency = 'USD' }: { value: number, currency: string }) => {
+    const { number } = useSpring({
+      from: { number: 0 },
+      number: value,
+      delay: 200,
+      config: { mass: 1, tension: 20, friction: 10 },
+    });
+  
+    return (
+      <animated.div>
+        {number.to((n) => new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency,
+        }).format(n))}
+      </animated.div>
+    );
+  };
 
+export function StatCard({ title, value, icon: Icon, description, currency = 'USD', loading }: StatCardProps) {
+  
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -31,7 +48,9 @@ export function StatCard({ title, value, icon: Icon, description, currency = 'US
             </div>
         ) : (
             <>
-                <div className="text-2xl font-bold">{formattedValue}</div>
+                <div className="text-2xl font-bold">
+                    <AnimatedNumber value={value} currency={currency} />
+                </div>
                 {description && <p className="text-xs text-muted-foreground">{description}</p>}
             </>
         )}
