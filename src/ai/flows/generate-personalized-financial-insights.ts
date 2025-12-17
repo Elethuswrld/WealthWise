@@ -11,35 +11,70 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+const TransactionSchema = z.object({
+  type: z.enum(['income', 'expense', 'investment']),
+  category: z.string(),
+  amount: z.number(),
+  date: z.string().describe('Date in ISO format'),
+});
+
+const AssetSchema = z.object({
+    assetType: z.string(),
+    currentValue: z.number(),
+});
+
 const FinancialInsightsInputSchema = z.object({
-  income: z.number().describe('The user\'s total income for the month.'),
-  expenses: z.number().describe('The user\'s total expenses for the month.'),
-  netWorth: z.number().describe('The user\'s current net worth.'),
-  transactionHistory: z.string().describe('The user\'s transaction history.'),
+  transactions: z.array(TransactionSchema).describe("The user's transaction history for the last 2-3 months."),
+  portfolio: z.array(AssetSchema).describe("The user's current investment portfolio."),
 });
 export type FinancialInsightsInput = z.infer<typeof FinancialInsightsInputSchema>;
 
 const FinancialInsightsOutputSchema = z.object({
-  insights: z.string().describe('Personalized financial insights and recommendations.'),
+  insights: z
+    .array(z.string())
+    .describe(
+      'A list of 2-3 short, observational, and personalized financial insights. Frame insights as statements, not advice.'
+    ),
 });
 export type FinancialInsightsOutput = z.infer<typeof FinancialInsightsOutputSchema>;
 
 export async function generatePersonalizedInsights(input: FinancialInsightsInput): Promise<FinancialInsightsOutput> {
-  return generatePersonalizedInsightsFlow(input);
+  const {output} = await generatePersonalizedInsightsFlow(input);
+  return output!;
 }
 
 const prompt = ai.definePrompt({
   name: 'financialInsightsPrompt',
   input: {schema: FinancialInsightsInputSchema},
   output: {schema: FinancialInsightsOutputSchema},
-  prompt: `You are a personal finance advisor. Analyze the following financial data and provide personalized insights and recommendations to help the user improve their financial habits.
+  prompt: `You are a financial analyst. Your role is to provide observational insights based on the provided financial data. Do not give advice or instructions.
 
-Income: {{income}}
-Expenses: {{expenses}}
-Net Worth: {{netWorth}}
-Transaction History: {{transactionHistory}}
+Analyze the following data:
+- Transaction History: A JSON array of recent transactions.
+- Portfolio: A JSON array of the user's current assets.
 
-Provide clear, actionable, and concise advice, and identify potential overspending or suggest saving strategies to help improve financial habits.
+Based on this data, identify 2-3 key patterns, trends, or potential imbalances.
+
+Examples of good, observational insights:
+- "Your spending on 'Dining Out' has increased by 25% compared to the previous month."
+- "Your portfolio has a 70% allocation to Cryptocurrency."
+- "Your income has been consistent for the past three months."
+- "Your 'Subscription' expenses make up 15% of your monthly spending."
+
+Examples of bad, advisory insights (DO NOT DO THIS):
+- "You should spend less on 'Dining Out'."
+- "You must rebalance your portfolio."
+- "You need to find a new job."
+
+Here is the user's data:
+
+Transactions:
+{{{json transactions}}}
+
+Portfolio:
+{{{json portfolio}}}
+
+Generate your insights based *only* on the data provided.
 `,
 });
 

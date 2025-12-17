@@ -19,7 +19,7 @@ import type { FinancialInsightsInput } from '@/ai/flows/generate-personalized-fi
 
 export function AiInsights({ data }: { data: FinancialInsightsInput }) {
   const [isLoading, setIsLoading] = useState(false);
-  const [insights, setInsights] = useState('');
+  const [insights, setInsights] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -54,8 +54,12 @@ export function AiInsights({ data }: { data: FinancialInsightsInput }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className='flex items-center gap-2'><Sparkles className="h-5 w-5 text-primary"/> AI Financial Insights</AlertDialogTitle>
-            <AlertDialogDescription className="text-foreground whitespace-pre-wrap pt-4">
-                {insights}
+            <AlertDialogDescription asChild>
+                <ul className="text-foreground space-y-2 pt-4 list-disc pl-5">
+                    {insights.map((insight, index) => (
+                        <li key={index}>{insight}</li>
+                    ))}
+                </ul>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

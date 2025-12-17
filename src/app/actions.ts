@@ -5,7 +5,7 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
-  signOut as firebaseSignOut,
+  signOut as firebaseSignout,
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, collection, addDoc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
@@ -113,7 +113,7 @@ export async function signInWithGoogle() {
 
 export async function signOut() {
   try {
-    await firebaseSignOut(auth);
+    await firebaseSignout(auth);
     return { success: true };
   } catch (error: any) {
     return { error: error.message };

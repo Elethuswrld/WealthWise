@@ -10,6 +10,7 @@ import { PortfolioChart } from '@/components/dashboard/portfolio-chart';
 import { AddDataDialog } from '@/components/dashboard/add-data-dialog';
 import { AiInsights } from '@/components/dashboard/ai-insights';
 import { calculateNetWorth, calculateCurrentMonthSummary } from '@/lib/finance';
+import type { FinancialInsightsInput } from '@/ai/flows/generate-personalized-financial-insights';
 
 export default async function DashboardPage() {
   const user = auth.currentUser;
@@ -24,12 +25,18 @@ export default async function DashboardPage() {
   const netWorth = calculateNetWorth(portfolio);
   const { income, expenses, profitLoss } = calculateCurrentMonthSummary(transactions);
 
-  const aiInputData = {
-    income,
-    expenses,
-    netWorth,
-    transactionHistory: transactions.map(tx => `${tx.date.toDate().toLocaleDateString()}: ${tx.type} - ${tx.category} - $${tx.amount}`).join('\n')
-  }
+  const aiInputData: FinancialInsightsInput = {
+    transactions: transactions.map(tx => ({
+      type: tx.type,
+      category: tx.category,
+      amount: tx.amount,
+      date: tx.date.toDate().toISOString(),
+    })),
+    portfolio: portfolio.map(p => ({
+        assetType: p.assetType,
+        currentValue: p.currentValue,
+    })),
+  };
 
   return (
     <div className="space-y-8">
