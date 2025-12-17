@@ -1,22 +1,28 @@
 'use server';
 
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
+  getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
   signOut as firebaseSignout,
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, collection, addDoc, query, where, getDocs, writeBatch, documentId } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
+import { getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs, documentId } from 'firebase/firestore';
+import { firebaseConfig } from '@/firebase/config';
 import type { Asset, Transaction } from '@/lib/types';
-import { generatePersonalizedInsights, type FinancialInsightsInput } from '@/ai/flows/generate-personalized-financial-insights';
+import { generatePersonalizedInsights } from '@/ai/flows/generate-personalized-financial-insights';
 import { dummyAssets, dummyTransactions } from '@/lib/dummy-data';
 import type { FinancialSnapshot } from '@/lib/finance';
-import { setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { v4 as uuidv4 } from 'uuid';
 
-const { auth, firestore: db } = initializeFirebase();
+// Server-side Firebase initialization
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const auth = getAuth(app);
+const db = getFirestore(app);
+
 
 // --- Auth Actions ---
 
@@ -58,17 +64,20 @@ export async function signUpWithPassword(formData: FormData) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     
+    // Manually update profile to include name, as it's not done automatically
     const userRef = doc(db, 'users', user.uid);
     const userData = {
         id: user.uid,
         email: user.email,
-        name: name,
+        name: name, // Use the name from the form
         currency: 'USD',
         createdAt: serverTimestamp(),
     };
     await setDoc(userRef, userData, { merge: true });
     
-    await createNewUserDocument(user);
+    // Update user object for createNewUserDocument
+    const userWithDisplayName = { ...user, displayName: name };
+    await createNewUserDocument(userWithDisplayName);
 
     return { success: true };
   } catch (error: any) {
@@ -98,21 +107,20 @@ export async function signInWithGoogle() {
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
 
-    const userRef = doc(db, 'users', user.uid);
-    await setDoc(userRef, {
-        id: user.uid,
-        email: user.email,
-        name: user.displayName,
-        currency: 'USD',
-        createdAt: serverTimestamp(),
-    }, { merge: true });
-    
-    // Check if user has transactions to prevent re-populating data
-    const transactionsQuery = query(collection(db, `users/${user.uid}/transactions`), where(documentId(), '!=', ''));
-    const transactionsSnapshot = await getDocs(transactionsQuery);
+    const userQuery = query(collection(db, 'users'), where('id', '==', user.uid));
+    const userSnapshot = await getDocs(userQuery);
 
-    if(transactionsSnapshot.empty) {
-        await createNewUserDocument(user);
+    if (userSnapshot.empty) {
+      // New user, create document and populate data
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, {
+          id: user.uid,
+          email: user.email,
+          name: user.displayName,
+          currency: 'USD',
+          createdAt: serverTimestamp(),
+      }, { merge: true });
+      await createNewUserDocument(user);
     }
 
     return { success: true, user: result.user };
@@ -139,9 +147,7 @@ export async function addTransaction(formData: FormData) {
 
     try {
         const transactionId = uuidv4();
-        const newTransaction: Omit<Transaction, 'date'> = {
-            id: transactionId,
-            userId,
+        const newTransaction: Omit<Transaction, 'date' | 'id' | 'userId' > = {
             type: formData.get('type') as Transaction['type'],
             category: formData.get('category') as string,
             amount: parseFloat(formData.get('amount') as string),
@@ -151,6 +157,8 @@ export async function addTransaction(formData: FormData) {
         const docRef = doc(db, `users/${userId}/transactions`, transactionId);
         addDocumentNonBlocking(docRef, {
             ...newTransaction,
+            id: transactionId,
+            userId,
             date: serverTimestamp(),
         });
 
@@ -166,9 +174,7 @@ export async function addAsset(formData: FormData) {
 
     try {
         const assetId = uuidv4();
-        const newAsset: Asset = {
-            id: assetId,
-            userId,
+        const newAsset: Omit<Asset, 'id' | 'userId'> = {
             assetType: formData.get('assetType') as Asset['assetType'],
             assetName: formData.get('assetName') as string,
             investedAmount: parseFloat(formData.get('investedAmount') as string),
@@ -176,7 +182,7 @@ export async function addAsset(formData: FormData) {
         };
 
         const docRef = doc(db, `users/${userId}/portfolio`, assetId);
-        addDocumentNonBlocking(docRef, newAsset);
+        addDocumentNonBlocking(docRef, { ...newAsset, id: assetId, userId });
 
         return { success: true };
     } catch (error: any) {
