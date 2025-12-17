@@ -1,6 +1,6 @@
-import { auth } from '@/lib/firebase';
-import { redirect } from 'next/navigation';
-import { getUserPortfolio } from '@/lib/api';
+'use client';
+
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Asset } from '@/lib/types';
 import {
   Table,
@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { AddDataDialog } from '@/components/dashboard/add-data-dialog';
 import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { collection } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -31,14 +33,18 @@ const formatPercent = (value: number) => {
     }).format(value);
   };
 
-export default async function PortfolioPage() {
-  const user = auth.currentUser;
-  if (!user) {
-    redirect('/login');
-  }
+export default function PortfolioPage() {
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  const portfolio: Asset[] = await getUserPortfolio(user.uid);
-  const totalValue = portfolio.reduce((sum, asset) => sum + asset.currentValue, 0);
+  const portfolioQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, `users/${user.uid}/portfolio`);
+  }, [firestore, user]);
+
+  const { data: portfolio, isLoading } = useCollection<Asset>(portfolioQuery);
+
+  const totalValue = portfolio ? portfolio.reduce((sum, asset) => sum + asset.currentValue, 0) : 0;
 
   return (
     <div className="space-y-8">
@@ -73,7 +79,17 @@ export default async function PortfolioPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {portfolio.length > 0 ? (
+              {isLoading ? (
+                 Array.from({ length: 3 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                    </TableRow>
+                ))
+              ) : portfolio && portfolio.length > 0 ? (
                 portfolio.map((asset) => {
                   const gainLoss = asset.currentValue - asset.investedAmount;
                   const gainLossPercent = asset.investedAmount === 0 ? 0 : gainLoss / asset.investedAmount;

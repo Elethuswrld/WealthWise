@@ -3,14 +3,14 @@ import { db } from './firebase';
 import type { Asset, Transaction } from './types';
 
 export async function getUserPortfolio(userId: string): Promise<Asset[]> {
-    const assetsQuery = query(collection(db, 'portfolio'), where('userId', '==', userId));
+    const assetsQuery = query(collection(db, `users/${userId}/portfolio`), where('userId', '==', userId));
     const querySnapshot = await getDocs(assetsQuery);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Asset));
 }
 
 export async function getUserTransactions(userId: string, count?: number): Promise<Transaction[]> {
     let transactionsQuery = query(
-        collection(db, 'transactions'), 
+        collection(db, `users/${userId}/transactions`), 
         where('userId', '==', userId), 
         orderBy('date', 'desc')
     );

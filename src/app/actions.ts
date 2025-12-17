@@ -7,41 +7,42 @@ import {
   signInWithPopup,
   signOut as firebaseSignout,
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, collection, addDoc, query, where, getDocs, writeBatch } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { doc, setDoc, serverTimestamp, collection, addDoc, query, where, getDocs, writeBatch, documentId } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
 import type { Asset, Transaction } from '@/lib/types';
 import { generatePersonalizedInsights, type FinancialInsightsInput } from '@/ai/flows/generate-personalized-financial-insights';
 import { dummyAssets, dummyTransactions } from '@/lib/dummy-data';
 import type { FinancialSnapshot } from '@/lib/finance';
+import { setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { v4 as uuidv4 } from 'uuid';
+
+const { auth, firestore: db } = initializeFirebase();
 
 // --- Auth Actions ---
 
 async function createNewUserDocument(user: import('firebase/auth').User) {
     const userRef = doc(db, 'users', user.uid);
-    await setDoc(userRef, {
-        uid: user.uid,
+    const userData = {
+        id: user.uid,
         email: user.email,
         name: user.displayName,
-        photoURL: user.photoURL,
         currency: 'USD',
         createdAt: serverTimestamp(),
-    });
+    };
+    setDocumentNonBlocking(userRef, userData, { merge: true });
 
     // Populate with dummy data
-    const batch = writeBatch(db);
-    const transactionsCollection = collection(db, "transactions");
+    const transactionsCollection = collection(db, `users/${user.uid}/transactions`);
     dummyTransactions.forEach(tx => {
-        const docRef = doc(transactionsCollection);
-        batch.set(docRef, { ...tx, userId: user.uid, date: serverTimestamp() });
+        const docRef = doc(transactionsCollection, uuidv4());
+        addDocumentNonBlocking(docRef, { ...tx, userId: user.uid, id: docRef.id, date: serverTimestamp() });
     });
 
-    const assetsCollection = collection(db, "portfolio");
+    const assetsCollection = collection(db, `users/${user.uid}/portfolio`);
     dummyAssets.forEach(asset => {
-        const docRef = doc(assetsCollection);
-        batch.set(docRef, { ...asset, userId: user.uid });
+        const docRef = doc(assetsCollection, uuidv4());
+        addDocumentNonBlocking(docRef, { ...asset, userId: user.uid, id: docRef.id });
     });
-
-    await batch.commit();
 }
 
 export async function signUpWithPassword(formData: FormData) {
@@ -57,17 +58,15 @@ export async function signUpWithPassword(formData: FormData) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     
-    // We can't update displayName directly on creation this way,
-    // so we'll store it in our Firestore document.
     const userRef = doc(db, 'users', user.uid);
-    await setDoc(userRef, {
-        uid: user.uid,
+    const userData = {
+        id: user.uid,
         email: user.email,
         name: name,
-        photoURL: null,
         currency: 'USD',
         createdAt: serverTimestamp(),
-    });
+    };
+    await setDoc(userRef, userData, { merge: true });
     
     await createNewUserDocument(user);
 
@@ -99,10 +98,20 @@ export async function signInWithGoogle() {
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
 
-    // Check if user is new
-    const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid));
-    const querySnapshot = await getDocs(userQuery);
-    if(querySnapshot.empty) {
+    const userRef = doc(db, 'users', user.uid);
+    await setDoc(userRef, {
+        id: user.uid,
+        email: user.email,
+        name: user.displayName,
+        currency: 'USD',
+        createdAt: serverTimestamp(),
+    }, { merge: true });
+    
+    // Check if user has transactions to prevent re-populating data
+    const transactionsQuery = query(collection(db, `users/${user.uid}/transactions`), where(documentId(), '!=', ''));
+    const transactionsSnapshot = await getDocs(transactionsQuery);
+
+    if(transactionsSnapshot.empty) {
         await createNewUserDocument(user);
     }
 
@@ -129,7 +138,9 @@ export async function addTransaction(formData: FormData) {
     if (!userId) return { error: 'User not authenticated' };
 
     try {
-        const newTransaction: Omit<Transaction, 'id' | 'date'> = {
+        const transactionId = uuidv4();
+        const newTransaction: Omit<Transaction, 'date'> = {
+            id: transactionId,
             userId,
             type: formData.get('type') as Transaction['type'],
             category: formData.get('category') as string,
@@ -137,7 +148,8 @@ export async function addTransaction(formData: FormData) {
             notes: formData.get('notes') as string | undefined,
         };
 
-        await addDoc(collection(db, 'transactions'), {
+        const docRef = doc(db, `users/${userId}/transactions`, transactionId);
+        addDocumentNonBlocking(docRef, {
             ...newTransaction,
             date: serverTimestamp(),
         });
@@ -153,7 +165,9 @@ export async function addAsset(formData: FormData) {
     if (!userId) return { error: 'User not authenticated' };
 
     try {
-        const newAsset: Omit<Asset, 'id'> = {
+        const assetId = uuidv4();
+        const newAsset: Asset = {
+            id: assetId,
             userId,
             assetType: formData.get('assetType') as Asset['assetType'],
             assetName: formData.get('assetName') as string,
@@ -161,7 +175,8 @@ export async function addAsset(formData: FormData) {
             currentValue: parseFloat(formData.get('currentValue') as string),
         };
 
-        await addDoc(collection(db, 'portfolio'), newAsset);
+        const docRef = doc(db, `users/${userId}/portfolio`, assetId);
+        addDocumentNonBlocking(docRef, newAsset);
 
         return { success: true };
     } catch (error: any) {

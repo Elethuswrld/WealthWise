@@ -11,12 +11,14 @@ import { Badge } from '@/components/ui/badge';
 import type { Transaction } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '../ui/skeleton';
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
+  loading?: boolean;
 }
 
-export function RecentTransactions({ transactions }: RecentTransactionsProps) {
+export function RecentTransactions({ transactions, loading }: RecentTransactionsProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -53,7 +55,16 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.length > 0 ? (
+            {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    </TableRow>
+                ))
+            ) : transactions.length > 0 ? (
               transactions.map((tx) => (
                 <TableRow key={tx.id}>
                   <TableCell className="font-medium">{tx.category}</TableCell>
@@ -67,7 +78,7 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
                     {tx.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(tx.amount))}
                   </TableCell>
                   <TableCell>
-                    {tx.date ? format(tx.date.toDate(), 'MMM d, yyyy') : 'N/A'}
+                    {tx.date ? format(new Date(tx.date.seconds * 1000), 'MMM d, yyyy') : 'N/A'}
                   </TableCell>
                 </TableRow>
               ))

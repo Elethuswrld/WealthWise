@@ -1,6 +1,6 @@
-import { auth } from '@/lib/firebase';
-import { redirect } from 'next/navigation';
-import { getUserTransactions } from '@/lib/api';
+'use client';
+
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Transaction } from '@/lib/types';
 import {
   Table,
@@ -15,6 +15,9 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AddDataDialog } from '@/components/dashboard/add-data-dialog';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -36,13 +39,16 @@ const getBadgeVariant = (type: Transaction['type']) => {
   }
 };
 
-export default async function TransactionsPage() {
-  const user = auth.currentUser;
-  if (!user) {
-    redirect('/login');
-  }
+export default function TransactionsPage() {
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  const transactions: Transaction[] = await getUserTransactions(user.uid);
+  const transactionsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, `users/${user.uid}/transactions`), orderBy('date', 'desc'));
+  }, [firestore, user]);
+
+  const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
 
   return (
     <div className="space-y-8">
@@ -76,7 +82,17 @@ export default async function TransactionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.length > 0 ? (
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-4 w-16" /></TableCell>
+                    </TableRow>
+                ))
+              ) : transactions && transactions.length > 0 ? (
                 transactions.map((tx) => (
                   <TableRow key={tx.id}>
                     <TableCell className="font-medium">{tx.category}</TableCell>
@@ -85,7 +101,7 @@ export default async function TransactionsPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{tx.notes || '-'}</TableCell>
                     <TableCell>
-                      {tx.date ? format(tx.date.toDate(), 'MMM d, yyyy') : 'N/A'}
+                      {tx.date ? format(new Date(tx.date.seconds * 1000), 'MMM d, yyyy') : 'N/A'}
                     </TableCell>
                     <TableCell className={cn(
                       "text-right font-mono",

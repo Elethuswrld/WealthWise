@@ -1,10 +1,11 @@
 import type { Timestamp } from 'firebase/firestore';
 
+export type WithId<T> = T & { id: string };
+
 export interface UserProfile {
-  uid: string;
+  id: string;
   email: string | null;
   name: string | null;
-  photoURL: string | null;
   currency: string;
   createdAt: Timestamp;
 }
