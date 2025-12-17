@@ -8,6 +8,7 @@ import { useMemo } from 'react';
 import { calculateMonthlyPerformance } from '@/lib/finance';
 import EmptyState from '../empty-state';
 import { LineChart as LineChartIcon } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 
 interface PerformanceChartProps {
@@ -19,7 +20,8 @@ const resolveChartTheme = (theme: string | undefined) => {
     return {
       stroke: isDark ? '#A1A1AA' : '#71717A', // zinc-400 : zinc-500
       fill: isDark ? '#FAFAFA' : '#09090B', // zinc-50 : zinc-950
-      line: 'hsl(var(--primary))'
+      incomeLine: 'hsl(var(--chart-1))',
+      expenseLine: 'hsl(var(--destructive))',
     };
   };
 
@@ -52,7 +54,12 @@ export function PerformanceChart({ transactions }: PerformanceChartProps) {
         <CardTitle>Monthly Performance</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="h-[300px]"
+        >
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
@@ -68,10 +75,11 @@ export function PerformanceChart({ transactions }: PerformanceChartProps) {
                 labelStyle={{ color: 'hsl(var(--foreground))' }}
                 cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1.5 }}
               />
-              <Line type="monotone" dataKey="net" stroke={chartTheme.line} strokeWidth={2} dot={{ r: 4, fill: chartTheme.line }} activeDot={{ r: 8 }} animationDuration={1000} />
+              <Line type="monotone" dataKey="income" stroke={chartTheme.incomeLine} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 8 }} animationDuration={1000} />
+              <Line type="monotone" dataKey="expenses" stroke={chartTheme.expenseLine} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 8 }} animationDuration={1000} />
             </LineChart>
           </ResponsiveContainer>
-        </div>
+        </motion.div>
       </CardContent>
     </Card>
   );

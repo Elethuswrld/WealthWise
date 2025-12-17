@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 import { calculatePortfolioAllocation } from '@/lib/finance';
 import EmptyState from '../empty-state';
 import { PieChart as PieChartIcon } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface PortfolioChartProps {
   assets: Asset[] | null;
@@ -49,7 +50,12 @@ export function PortfolioChart({ assets }: PortfolioChartProps) {
         <CardTitle>Portfolio Allocation</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="h-[300px]"
+        >
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -97,7 +103,7 @@ export function PortfolioChart({ assets }: PortfolioChartProps) {
               <Legend iconSize={10} />
             </PieChart>
           </ResponsiveContainer>
-        </div>
+        </motion.div>
       </CardContent>
     </Card>
   );
