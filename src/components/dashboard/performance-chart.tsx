@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Transaction } from '@/lib/types';
 import { useTheme } from 'next-themes';
 import { useMemo } from 'react';
-import { format } from 'date-fns';
+import { calculateMonthlyPerformance } from '@/lib/finance';
+
 
 interface PerformanceChartProps {
   transactions: Transaction[];
@@ -24,29 +25,7 @@ export function PerformanceChart({ transactions }: PerformanceChartProps) {
   const { theme } = useTheme();
   const chartTheme = resolveChartTheme(theme);
 
-  const data = useMemo(() => {
-    const monthlyData: { [key: string]: { income: number; expense: number } } = {};
-    
-    transactions.forEach(tx => {
-      if (!tx.date) return;
-      const month = format(tx.date.toDate(), 'yyyy-MM');
-      if (!monthlyData[month]) {
-        monthlyData[month] = { income: 0, expense: 0 };
-      }
-      if (tx.type === 'income') {
-        monthlyData[month].income += tx.amount;
-      } else if (tx.type === 'expense') {
-        monthlyData[month].expense += tx.amount;
-      }
-    });
-
-    return Object.entries(monthlyData)
-        .map(([month, values]) => ({
-            name: format(new Date(month + '-02'), 'MMM yy'),
-            net: values.income - values.expense,
-        }))
-        .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
-  }, [transactions]);
+  const data = useMemo(() => calculateMonthlyPerformance(transactions), [transactions]);
   
   if (transactions.length === 0) {
     return (

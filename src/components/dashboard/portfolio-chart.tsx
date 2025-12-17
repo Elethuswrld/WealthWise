@@ -4,6 +4,7 @@ import { Pie, PieChart, ResponsiveContainer, Cell, Legend, Tooltip } from 'recha
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Asset } from '@/lib/types';
 import { useMemo } from 'react';
+import { calculatePortfolioAllocation } from '@/lib/finance';
 
 interface PortfolioChartProps {
   assets: Asset[];
@@ -12,21 +13,7 @@ interface PortfolioChartProps {
 const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
 export function PortfolioChart({ assets }: PortfolioChartProps) {
-    const data = useMemo(() => {
-        const portfolioByType: { [key: string]: number } = {};
-        assets.forEach(asset => {
-            if (portfolioByType[asset.assetType]) {
-                portfolioByType[asset.assetType] += asset.currentValue;
-            } else {
-                portfolioByType[asset.assetType] = asset.currentValue;
-            }
-        });
-
-        return Object.entries(portfolioByType).map(([name, value]) => ({
-            name,
-            value,
-        }));
-    }, [assets]);
+    const data = useMemo(() => calculatePortfolioAllocation(assets), [assets]);
     
     if (assets.length === 0) {
         return (

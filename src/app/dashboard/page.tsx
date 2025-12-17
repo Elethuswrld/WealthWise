@@ -9,6 +9,7 @@ import { PerformanceChart } from '@/components/dashboard/performance-chart';
 import { PortfolioChart } from '@/components/dashboard/portfolio-chart';
 import { AddDataDialog } from '@/components/dashboard/add-data-dialog';
 import { AiInsights } from '@/components/dashboard/ai-insights';
+import { calculateNetWorth, calculateCurrentMonthSummary } from '@/lib/finance';
 
 export default async function DashboardPage() {
   const user = auth.currentUser;
@@ -20,22 +21,8 @@ export default async function DashboardPage() {
   const transactions: Transaction[] = await getUserTransactions(user.uid);
   const recentTransactions = transactions.slice(0, 5);
 
-  const netWorth = portfolio.reduce((sum, asset) => sum + asset.currentValue, 0);
-
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  
-  const monthlyTransactions = transactions.filter(tx => tx.date && tx.date.toDate() >= startOfMonth);
-  
-  const income = monthlyTransactions
-    .filter(tx => tx.type === 'income')
-    .reduce((sum, tx) => sum + tx.amount, 0);
-    
-  const expenses = monthlyTransactions
-    .filter(tx => tx.type === 'expense')
-    .reduce((sum, tx) => sum + tx.amount, 0);
-    
-  const profitLoss = income - expenses;
+  const netWorth = calculateNetWorth(portfolio);
+  const { income, expenses, profitLoss } = calculateCurrentMonthSummary(transactions);
 
   const aiInputData = {
     income,
