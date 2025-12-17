@@ -5,26 +5,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Asset } from '@/lib/types';
 import { useMemo } from 'react';
 import { calculatePortfolioAllocation } from '@/lib/finance';
+import EmptyState from '../empty-state';
+import { PieChart as PieChartIcon } from 'lucide-react';
 
 interface PortfolioChartProps {
-  assets: Asset[];
+  assets: Asset[] | null;
 }
 
 const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
 export function PortfolioChart({ assets }: PortfolioChartProps) {
-    const data = useMemo(() => calculatePortfolioAllocation(assets), [assets]);
+    const data = useMemo(() => calculatePortfolioAllocation(assets || []), [assets]);
     
-    if (assets.length === 0) {
+    if (!assets || assets.length === 0) {
         return (
             <Card>
                 <CardHeader>
                     <CardTitle>Portfolio Allocation</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                        No assets to display.
-                    </div>
+                <CardContent className="h-[300px] flex items-center justify-center">
+                    <EmptyState
+                        title="No assets to display"
+                        description="Your portfolio allocation will appear here once you add an asset."
+                        icon={PieChartIcon}
+                    />
                 </CardContent>
             </Card>
         );

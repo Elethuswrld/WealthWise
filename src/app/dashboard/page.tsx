@@ -40,7 +40,7 @@ export default function DashboardPage() {
   const { data: transactions, isLoading: transactionsLoading } = useCollection<Transaction>(transactionsQuery);
   const { data: recentTransactions, isLoading: recentTransactionsLoading } = useCollection<Transaction>(recentTransactionsQuery);
   
-  const isLoading = portfolioLoading || transactionsLoading || recentTransactionsLoading;
+  const isLoading = portfolioLoading || transactionsLoading;
 
   const netWorth = portfolio ? calculateNetWorth(portfolio) : 0;
   const { income, expenses, profitLoss } = transactions ? calculateCurrentMonthSummary(transactions) : { income: 0, expenses: 0, profitLoss: 0 };
@@ -72,15 +72,15 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <div className="lg:col-span-4">
-            <PerformanceChart transactions={transactions || []} />
+            <PerformanceChart transactions={transactions} />
         </div>
         <div className="lg:col-span-3">
-            <PortfolioChart assets={portfolio || []} />
+            <PortfolioChart assets={portfolio} />
         </div>
       </div>
       
       <div>
-        <RecentTransactions transactions={recentTransactions || []} />
+        <RecentTransactions transactions={recentTransactions || []} loading={recentTransactionsLoading} />
       </div>
 
     </div>

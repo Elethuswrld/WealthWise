@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 import { AddDataDialog } from '@/components/dashboard/add-data-dialog';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import EmptyState from '@/components/empty-state';
+import { Repeat } from 'lucide-react';
 
 
 const formatCurrency = (amount: number) => {
@@ -71,55 +73,68 @@ export default function TransactionsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Category</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Notes</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                        <TableCell className="text-right"><Skeleton className="h-4 w-16" /></TableCell>
-                    </TableRow>
-                ))
-              ) : transactions && transactions.length > 0 ? (
-                transactions.map((tx) => (
-                  <TableRow key={tx.id}>
-                    <TableCell className="font-medium">{tx.category}</TableCell>
-                    <TableCell>
-                      <Badge variant={getBadgeVariant(tx.type)} className="capitalize">{tx.type}</Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{tx.notes || '-'}</TableCell>
-                    <TableCell>
-                      {tx.date ? format(new Date(tx.date.seconds * 1000), 'MMM d, yyyy') : 'N/A'}
-                    </TableCell>
-                    <TableCell className={cn(
-                      "text-right font-mono",
-                      tx.type === 'income' ? 'text-primary' : 'text-destructive'
-                    )}>
-                      {tx.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(tx.amount))}
-                    </TableCell>
+          {isLoading ? (
+            <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Notes</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
-                ))
-              ) : (
+                </TableHeader>
+                <TableBody>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                            <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                            <TableCell className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+          ) : transactions && transactions.length > 0 ? (
+            <Table>
+                <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                    No transactions yet. Add one to get started!
-                  </TableCell>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Notes</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                    {transactions.map((tx) => (
+                    <TableRow key={tx.id}>
+                        <TableCell className="font-medium">{tx.category}</TableCell>
+                        <TableCell>
+                        <Badge variant={getBadgeVariant(tx.type)} className="capitalize">{tx.type}</Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{tx.notes || '-'}</TableCell>
+                        <TableCell>
+                        {tx.date ? format(new Date(tx.date.seconds * 1000), 'MMM d, yyyy') : 'N/A'}
+                        </TableCell>
+                        <TableCell className={cn(
+                        "text-right font-mono",
+                        tx.type === 'income' ? 'text-primary' : 'text-destructive'
+                        )}>
+                        {tx.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(tx.amount))}
+                        </TableCell>
+                    </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+          ) : (
+            <EmptyState 
+                title="No transactions yet"
+                description="Add your first transaction to see your history here."
+                icon={Repeat}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

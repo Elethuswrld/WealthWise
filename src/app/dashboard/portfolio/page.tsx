@@ -14,9 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { AddDataDialog } from '@/components/dashboard/add-data-dialog';
-import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus, Wallet } from 'lucide-react';
 import { collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import EmptyState from '@/components/empty-state';
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -68,70 +69,83 @@ export default function PortfolioPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Asset Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Current Value</TableHead>
-                <TableHead className="text-right">Gain / Loss</TableHead>
-                <TableHead className="text-right">Gain / Loss (%)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                 Array.from({ length: 3 }).map((_, i) => (
-                    <TableRow key={i}>
-                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                        <TableCell className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
-                        <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-                        <TableCell className="text-right"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+            {isLoading ? (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Asset Name</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead className="text-right">Current Value</TableHead>
+                            <TableHead className="text-right">Gain / Loss</TableHead>
+                            <TableHead className="text-right">Gain / Loss (%)</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {Array.from({ length: 3 }).map((_, i) => (
+                            <TableRow key={i}>
+                                <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                                <TableCell className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                                <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                                <TableCell className="text-right"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            ) : portfolio && portfolio.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead>Asset Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead className="text-right">Current Value</TableHead>
+                        <TableHead className="text-right">Gain / Loss</TableHead>
+                        <TableHead className="text-right">Gain / Loss (%)</TableHead>
                     </TableRow>
-                ))
-              ) : portfolio && portfolio.length > 0 ? (
-                portfolio.map((asset) => {
-                  const gainLoss = asset.currentValue - asset.investedAmount;
-                  const gainLossPercent = asset.investedAmount === 0 ? 0 : gainLoss / asset.investedAmount;
-                  const isGain = gainLoss > 0;
-                  const isLoss = gainLoss < 0;
+                    </TableHeader>
+                    <TableBody>
+                        {portfolio.map((asset) => {
+                        const gainLoss = asset.currentValue - asset.investedAmount;
+                        const gainLossPercent = asset.investedAmount === 0 ? 0 : gainLoss / asset.investedAmount;
+                        const isGain = gainLoss > 0;
+                        const isLoss = gainLoss < 0;
 
-                  return (
-                    <TableRow key={asset.id}>
-                      <TableCell className="font-medium">{asset.assetName}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="capitalize">{asset.assetType}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-mono">{formatCurrency(asset.currentValue)}</TableCell>
-                      <TableCell className={cn(
-                        "text-right font-mono flex items-center justify-end gap-1",
-                        isGain && "text-primary",
-                        isLoss && "text-destructive"
-                      )}>
-                        {isGain && <ArrowUpRight className="h-4 w-4" />}
-                        {isLoss && <ArrowDownRight className="h-4 w-4" />}
-                        {!isGain && !isLoss && <Minus className="h-4 w-4" />}
-                        {formatCurrency(gainLoss)}
-                      </TableCell>
-                      <TableCell className={cn(
-                        "text-right font-mono",
-                         isGain && "text-primary",
-                         isLoss && "text-destructive"
-                      )}>
-                        {formatPercent(gainLossPercent)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                    You have no assets in your portfolio yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                        return (
+                            <TableRow key={asset.id}>
+                            <TableCell className="font-medium">{asset.assetName}</TableCell>
+                            <TableCell>
+                                <Badge variant="secondary" className="capitalize">{asset.assetType}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-mono">{formatCurrency(asset.currentValue)}</TableCell>
+                            <TableCell className={cn(
+                                "text-right font-mono flex items-center justify-end gap-1",
+                                isGain && "text-primary",
+                                isLoss && "text-destructive"
+                            )}>
+                                {isGain && <ArrowUpRight className="h-4 w-4" />}
+                                {isLoss && <ArrowDownRight className="h-4 w-4" />}
+                                {!isGain && !isLoss && <Minus className="h-4 w-4" />}
+                                {formatCurrency(gainLoss)}
+                            </TableCell>
+                            <TableCell className={cn(
+                                "text-right font-mono",
+                                isGain && "text-primary",
+                                isLoss && "text-destructive"
+                            )}>
+                                {formatPercent(gainLossPercent)}
+                            </TableCell>
+                            </TableRow>
+                        );
+                        })}
+                    </TableBody>
+                </Table>
+            ) : (
+                <EmptyState
+                    title="No assets in your portfolio"
+                    description="Add an asset to see your allocation here."
+                    icon={Wallet}
+                />
+            )}
         </CardContent>
       </Card>
     </div>

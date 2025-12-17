@@ -6,10 +6,12 @@ import type { Transaction } from '@/lib/types';
 import { useTheme } from 'next-themes';
 import { useMemo } from 'react';
 import { calculateMonthlyPerformance } from '@/lib/finance';
+import EmptyState from '../empty-state';
+import { LineChart as LineChartIcon } from 'lucide-react';
 
 
 interface PerformanceChartProps {
-  transactions: Transaction[];
+  transactions: Transaction[] | null;
 }
 
 const resolveChartTheme = (theme: string | undefined) => {
@@ -17,7 +19,7 @@ const resolveChartTheme = (theme: string | undefined) => {
     return {
       stroke: isDark ? '#A1A1AA' : '#71717A', // zinc-400 : zinc-500
       fill: isDark ? '#FAFAFA' : '#09090B', // zinc-50 : zinc-950
-      line: '#2A9D8F' // primary color
+      line: 'hsl(var(--primary))'
     };
   };
 
@@ -25,18 +27,20 @@ export function PerformanceChart({ transactions }: PerformanceChartProps) {
   const { theme } = useTheme();
   const chartTheme = resolveChartTheme(theme);
 
-  const data = useMemo(() => calculateMonthlyPerformance(transactions), [transactions]);
+  const data = useMemo(() => calculateMonthlyPerformance(transactions || []), [transactions]);
   
-  if (transactions.length === 0) {
+  if (!transactions || transactions.length === 0) {
     return (
         <Card>
             <CardHeader>
                 <CardTitle>Monthly Performance</CardTitle>
             </CardHeader>
-            <CardContent>
-                <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                    Not enough data to display chart.
-                </div>
+            <CardContent className="h-[300px] flex items-center justify-center">
+                <EmptyState 
+                    title="Not enough data"
+                    description="Your monthly performance will appear here after you log some transactions."
+                    icon={LineChartIcon}
+                />
             </CardContent>
         </Card>
     );
