@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-dashboard",
+      "description": "Financial Dashboard Illustration on the landing page.",
+      "imageUrl": "https://images.unsplash.com/photo-1748439281934-2803c6a3ee36?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxmaW5hbmNlJTIwZGFzaGJvYXJkfGVufDB8fHx8MTc2NTg4Nzg2NXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "finance dashboard"
+    }
+  ]
 }
