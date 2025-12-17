@@ -14,10 +14,10 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
   } from "@/components/ui/alert-dialog"
-import type { FinancialInsightsInput } from '@/ai/flows/generate-personalized-financial-insights';
+import type { FinancialSnapshot } from '@/lib/finance';
   
 
-export function AiInsights({ data }: { data: FinancialInsightsInput }) {
+export function AiInsights({ data }: { data: FinancialSnapshot }) {
   const [isLoading, setIsLoading] = useState(false);
   const [insights, setInsights] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -53,13 +53,21 @@ export function AiInsights({ data }: { data: FinancialInsightsInput }) {
       <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className='flex items-center gap-2'><Sparkles className="h-5 w-5 text-primary"/> AI Financial Insights</AlertDialogTitle>
+            <AlertDialogTitle className='flex items-center gap-2'>
+                <Sparkles className="h-5 w-5 text-primary"/> Insights (Beta)
+            </AlertDialogTitle>
             <AlertDialogDescription asChild>
-                <ul className="text-foreground space-y-2 pt-4 list-disc pl-5">
-                    {insights.map((insight, index) => (
-                        <li key={index}>{insight}</li>
-                    ))}
-                </ul>
+                {insights.length > 0 ? (
+                    <ul className="text-foreground space-y-2 pt-4 list-disc pl-5">
+                        {insights.map((insight, index) => (
+                            <li key={index}>{insight}</li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="text-muted-foreground pt-4 text-center">
+                        No notable trends detected this month.
+                    </p>
+                )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

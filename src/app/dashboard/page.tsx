@@ -9,8 +9,8 @@ import { PerformanceChart } from '@/components/dashboard/performance-chart';
 import { PortfolioChart } from '@/components/dashboard/portfolio-chart';
 import { AddDataDialog } from '@/components/dashboard/add-data-dialog';
 import { AiInsights } from '@/components/dashboard/ai-insights';
-import { calculateNetWorth, calculateCurrentMonthSummary } from '@/lib/finance';
-import type { FinancialInsightsInput } from '@/ai/flows/generate-personalized-financial-insights';
+import { calculateNetWorth, calculateCurrentMonthSummary, createFinancialSnapshot } from '@/lib/finance';
+import type { FinancialSnapshot } from '@/lib/finance';
 
 export default async function DashboardPage() {
   const user = auth.currentUser;
@@ -25,18 +25,7 @@ export default async function DashboardPage() {
   const netWorth = calculateNetWorth(portfolio);
   const { income, expenses, profitLoss } = calculateCurrentMonthSummary(transactions);
 
-  const aiInputData: FinancialInsightsInput = {
-    transactions: transactions.map(tx => ({
-      type: tx.type,
-      category: tx.category,
-      amount: tx.amount,
-      date: tx.date.toDate().toISOString(),
-    })),
-    portfolio: portfolio.map(p => ({
-        assetType: p.assetType,
-        currentValue: p.currentValue,
-    })),
-  };
+  const financialSnapshot: FinancialSnapshot = createFinancialSnapshot(transactions, portfolio);
 
   return (
     <div className="space-y-8">
@@ -50,7 +39,7 @@ export default async function DashboardPage() {
                 </p>
             </div>
             <div className='flex items-center gap-2'>
-                <AiInsights data={aiInputData} />
+                <AiInsights data={financialSnapshot} />
                 <AddDataDialog />
             </div>
         </div>

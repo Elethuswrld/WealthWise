@@ -12,6 +12,7 @@ import { auth, db } from '@/lib/firebase';
 import type { Asset, Transaction } from '@/lib/types';
 import { generatePersonalizedInsights, type FinancialInsightsInput } from '@/ai/flows/generate-personalized-financial-insights';
 import { dummyAssets, dummyTransactions } from '@/lib/dummy-data';
+import type { FinancialSnapshot } from '@/lib/finance';
 
 // --- Auth Actions ---
 
@@ -170,7 +171,7 @@ export async function addAsset(formData: FormData) {
 
 
 // --- GenAI Action ---
-export async function getAIFinancialInsights(input: FinancialInsightsInput) {
+export async function getAIFinancialInsights(input: FinancialSnapshot) {
     if (!auth.currentUser?.uid) {
         return { error: 'You must be logged in to get insights.' };
     }

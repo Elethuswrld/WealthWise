@@ -1,7 +1,7 @@
 'use client';
 
 import type { Asset, Transaction } from './types';
-import { format, startOfMonth } from 'date-fns';
+import { format, startOfMonth, subMonths, endOfMonth } from 'date-fns';
 
 export interface MonthlySummary {
   month: string;
@@ -16,6 +16,32 @@ export interface FinancialSummary {
   netCashFlow: number;
   netWorth: number;
 }
+
+export interface FinancialSnapshot {
+  currentMonth: {
+    income: number;
+    expenses: number;
+    netCashFlow: number;
+  };
+  previousMonth?: {
+    income: number;
+    expenses: number;
+    netCashFlow: number;
+  };
+  spendingByCategory: {
+    category: string;
+    amount: number;
+    change?: number;
+  }[];
+  portfolioAllocation: {
+    assetType: string;
+    percentage: number;
+    value: number;
+  }[];
+  trends: {
+    expenseGrowthStreak: number;
+  };
+};
 
 /**
  * Calculates summary metrics for the current month from a list of transactions.
@@ -106,4 +132,90 @@ export function calculatePortfolioAllocation(assets: Asset[]): { name: string; v
         name,
         value,
     }));
+}
+
+/**
+ * Creates a comprehensive financial snapshot for AI analysis.
+ * @param transactions A list of all transactions.
+ * @param portfolio A list of all assets.
+ * @returns A FinancialSnapshot object.
+ */
+export function createFinancialSnapshot(transactions: Transaction[], portfolio: Asset[]): FinancialSnapshot {
+  const now = new Date();
+  const performance = calculateMonthlyPerformance(transactions);
+
+  // Helper to get month data
+  const getMonthSummary = (date: Date) => {
+    const monthKey = format(date, 'yyyy-MM');
+    const monthPerformance = performance.find(p => format(new Date(p.name), 'yyyy-MM') === monthKey);
+    return {
+      income: monthPerformance?.income || 0,
+      expenses: monthPerformance?.expenses || 0,
+      netCashFlow: monthPerformance?.net || 0,
+    };
+  };
+
+  const currentMonthData = getMonthSummary(now);
+  const previousMonthData = getMonthSummary(subMonths(now, 1));
+  const twoMonthsAgoData = getMonthSummary(subMonths(now, 2));
+
+  // Spending by category (current month vs previous)
+  const getSpendingByCategory = (date: Date) => {
+    const start = startOfMonth(date);
+    const end = endOfMonth(date);
+    const categorySpending: { [key: string]: number } = {};
+    transactions
+      .filter(tx => tx.type === 'expense' && tx.date && tx.date.toDate() >= start && tx.date.toDate() <= end)
+      .forEach(tx => {
+        categorySpending[tx.category] = (categorySpending[tx.category] || 0) + tx.amount;
+      });
+    return categorySpending;
+  };
+
+  const currentMonthSpending = getSpendingByCategory(now);
+  const prevMonthSpending = getSpendingByCategory(subMonths(now, 1));
+
+  const spendingByCategory = Object.entries(currentMonthSpending).map(([category, amount]) => {
+    const prevAmount = prevMonthSpending[category] || 0;
+    const change = prevAmount > 0 ? (amount - prevAmount) / prevAmount : (amount > 0 ? 1 : 0);
+    return { category, amount, change };
+  });
+
+  // Portfolio Allocation
+  const totalValue = calculateNetWorth(portfolio);
+  const portfolioAllocation = calculatePortfolioAllocation(portfolio).map(p => ({
+    assetType: p.name,
+    value: p.value,
+    percentage: totalValue > 0 ? p.value / totalValue : 0,
+  }));
+
+  // Trends
+  let expenseGrowthStreak = 0;
+  if (currentMonthData.expenses > previousMonthData.expenses && previousMonthData.expenses > 0) {
+    expenseGrowthStreak = 1;
+    if (previousMonthData.expenses > twoMonthsAgoData.expenses && twoMonthsAgoData.expenses > 0) {
+      expenseGrowthStreak = 2;
+      // You can extend this logic further back if needed
+    }
+  }
+  
+  // A streak of 3 requires 4 months of data. Let's simplify for now.
+  const sortedPerformance = [...performance].sort((a,b) => new Date(b.name).getTime() - new Date(a.name).getTime());
+  let streak = 0;
+  if (sortedPerformance.length >= 3) {
+      if (sortedPerformance[0].expenses > sortedPerformance[1].expenses && sortedPerformance[1].expenses > sortedPerformance[2].expenses) {
+          streak = 3;
+      }
+  }
+
+
+  return {
+    currentMonth: currentMonthData,
+    previousMonth: previousMonthData,
+    spendingByCategory,
+    portfolioAllocation,
+    trends: {
+      expenseGrowthStreak: streak,
+    },
+  };
 }

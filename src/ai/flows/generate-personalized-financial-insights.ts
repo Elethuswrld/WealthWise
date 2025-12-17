@@ -11,29 +11,39 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const TransactionSchema = z.object({
-  type: z.enum(['income', 'expense', 'investment']),
-  category: z.string(),
-  amount: z.number(),
-  date: z.string().describe('Date in ISO format'),
-});
+const FinancialSnapshotSchema = z.object({
+    currentMonth: z.object({
+      income: z.number(),
+      expenses: z.number(),
+      netCashFlow: z.number(),
+    }),
+    previousMonth: z.optional(z.object({
+      income: z.number(),
+      expenses: z.number(),
+      netCashFlow: z.number(),
+    })),
+    spendingByCategory: z.array(z.object({
+      category: z.string(),
+      amount: z.number(),
+      change: z.optional(z.number()),
+    })),
+    portfolioAllocation: z.array(z.object({
+      assetType: z.string(),
+      percentage: z.number(),
+      value: z.number(),
+    })),
+    trends: z.object({
+        expenseGrowthStreak: z.number().describe('Number of consecutive months expense has increased'),
+    }),
+  });
 
-const AssetSchema = z.object({
-    assetType: z.string(),
-    currentValue: z.number(),
-});
-
-const FinancialInsightsInputSchema = z.object({
-  transactions: z.array(TransactionSchema).describe("The user's transaction history for the last 2-3 months."),
-  portfolio: z.array(AssetSchema).describe("The user's current investment portfolio."),
-});
-export type FinancialInsightsInput = z.infer<typeof FinancialInsightsInputSchema>;
+export type FinancialInsightsInput = z.infer<typeof FinancialSnapshotSchema>;
 
 const FinancialInsightsOutputSchema = z.object({
   insights: z
     .array(z.string())
     .describe(
-      'A list of 2-3 short, observational, and personalized financial insights. Frame insights as statements, not advice.'
+      'A list of 2-3 short, observational, and personalized financial insights based on trigger conditions.'
     ),
 });
 export type FinancialInsightsOutput = z.infer<typeof FinancialInsightsOutputSchema>;
@@ -45,43 +55,54 @@ export async function generatePersonalizedInsights(input: FinancialInsightsInput
 
 const prompt = ai.definePrompt({
   name: 'financialInsightsPrompt',
-  input: {schema: FinancialInsightsInputSchema},
+  input: {schema: FinancialSnapshotSchema},
   output: {schema: FinancialInsightsOutputSchema},
-  prompt: `You are a financial analyst. Your role is to provide observational insights based on the provided financial data. Do not give advice or instructions.
+  system: `You are a financial analytics assistant.
+You provide observational insights only.
+You do not give financial advice, recommendations, or predictions.
+You base all statements strictly on the provided data.
+Your tone is neutral and factual.
+Generate insights ONLY if a specific condition is met. If no conditions are met, return an empty array for 'insights'.
+`,
+  prompt: `
+Analyze the following financial snapshot and generate insights based ONLY on the specified trigger conditions.
 
-Analyze the following data:
-- Transaction History: A JSON array of recent transactions.
-- Portfolio: A JSON array of the user's current assets.
+Data:
+{{{json this}}}
 
-Based on this data, identify 2-3 key patterns, trends, or potential imbalances.
+---
 
-Examples of good, observational insights:
-- "Your spending on 'Dining Out' has increased by 25% compared to the previous month."
-- "Your portfolio has a 70% allocation to Cryptocurrency."
-- "Your income has been consistent for the past three months."
-- "Your 'Subscription' expenses make up 15% of your monthly spending."
+**Trigger Conditions & Output Format:**
 
-Examples of bad, advisory insights (DO NOT DO THIS):
-- "You should spend less on 'Dining Out'."
-- "You must rebalance your portfolio."
-- "You need to find a new job."
+1.  **Overspending Detection:**
+    *   **Condition:** If any category in \`spendingByCategory\` has a \`change\` greater than or equal to 0.15 (15%).
+    *   **Output:** "Spending on '[category]' increased by [change as %] compared to last month."
+    *   **Example:** "Spending on 'Food' increased by 18% compared to last month."
 
-Here is the user's data:
+2.  **Portfolio Imbalance:**
+    *   **Condition:** If any asset in \`portfolioAllocation\` has a \`percentage\` greater than or equal to 0.6 (60%).
+    *   **Output:** "[assetType] currently represents [percentage as %] of your portfolio allocation."
+    *   **Example:** "Forex currently represents 62% of your portfolio allocation."
 
-Transactions:
-{{{json transactions}}}
+3.  **Trend Commentary:**
+    *   **Condition:** If \`trends.expenseGrowthStreak\` is greater than or equal to 3.
+    *   **Output:** "Total expenses have increased for [expenseGrowthStreak] consecutive months."
+    *   **Example:** "Total expenses have increased for 3 consecutive months."
 
-Portfolio:
-{{{json portfolio}}}
-
-Generate your insights based *only* on the data provided.
+**Instructions:**
+- Check each condition.
+- For each condition that is met, generate one corresponding insight string.
+- If a condition is met for multiple items (e.g., two categories are overspent), you can generate an insight for each, but limit the total number of insights to a maximum of 3.
+- If no conditions are met, you MUST return an empty array for the 'insights' field.
+- Format percentages to whole numbers (e.g., 0.18 becomes 18%).
+- Be concise and stick to the defined output formats.
 `,
 });
 
 const generatePersonalizedInsightsFlow = ai.defineFlow(
   {
     name: 'generatePersonalizedInsightsFlow',
-    inputSchema: FinancialInsightsInputSchema,
+    inputSchema: FinancialSnapshotSchema,
     outputSchema: FinancialInsightsOutputSchema,
   },
   async input => {
