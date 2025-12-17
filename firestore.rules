@@ -1,23 +1,184 @@
+/**
+ * Core Philosophy:
+ * This ruleset enforces a strict, private, user-ownership security model. All data is
+ * considered private and is partitioned by user ID. A user can only ever access data
+ * that exists within their own data tree, ensuring strong isolation between users.
+ *
+ * Data Structure:
+ * The data is organized hierarchically. All user-specific data, including their profile,
+ * transactions, and portfolio assets, is nested under a top-level document in the `/users`
+ * collection, keyed by the user's unique ID (`/users/{userId}`). This structure makes
+ * ownership explicit through the document path.
+ *
+ * Key Security Decisions:
+ * - User Isolation: A user can only read or write documents under their own `/users/{userId}` path.
+ * - No User Enumeration: Listing the top-level `/users` collection is explicitly disallowed
+ *   to prevent malicious actors from discovering all user IDs in the system.
+ * - Ownership is Immutable: Once a document is created (e.g., a transaction), its
+ *   link to the parent user (`userId` field) cannot be changed.
+ * - Default Deny: Any path not explicitly defined in these rules is inaccessible.
+ *
+ * Denormalization for Authorization:
+ * Security is based on the document path (`/users/{userId}/...`), which contains the
+ * owner's ID. This avoids costly and slow `get()` calls to other documents for
+ * authorization checks. For integrity, documents like Transactions contain a denormalized
+ * `userId` field, which is validated against the path on creation to ensure the data
+ * and its location are consistent.
+ *
+ * Structural Segregation:
+ * Each user's data is segregated into its own document tree. This is a powerful pattern
+ * that prevents data leakage, as a query for transactions can only ever operate within
+ * the context of a single user's subcollection, making it impossible to accidentally
+ * list another user's private financial data.
+ */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // A user can only access documents within their own data tree (/users/{their-own-id}/...).
-    match /users/{userId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null;
 
-      // A user can only access their own transactions.
-      match /transactions/{transactionId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
+    // ------------------------------------------------------------------------
+    // Helper Functions
+    // ------------------------------------------------------------------------
 
-      // A user can only access their own portfolio assets.
-      match /portfolio/{assetId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Public read for general data if needed, but none for now.
-    // Example: match /public-data/{docId} { allow read; }
+    /**
+     * Checks if the currently authenticated user's UID matches the given userId.
+     * This is the fundamental check for document ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks for ownership on an existing document. Used for update and delete
+     * operations to prevent acting on non-existent data.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Validates a new User document on creation.
+     * Ensures the creator is the owner and the document's 'id' field matches the path.
+     */
+    function isValidNewUser(userId) {
+      let incomingData = request.resource.data;
+      return isOwner(userId)
+        && incomingData.id == userId;
+    }
+
+    /**
+     * Validates a User document on update.
+     * Ensures the owner is making the change and that the primary 'id' is not changed.
+     */
+    function isImmutableUser(userId) {
+      let incomingData = request.resource.data;
+      return isExistingOwner(userId)
+        && incomingData.id == resource.data.id;
+    }
+
+    /**
+     * Validates a new Transaction document on creation.
+     * Enforces that the transaction's internal 'userId' and 'id' fields match the
+     * document's path, creating an unbreakable link to the owner and its own identity.
+     */
+    function isValidNewTransaction(userId, transactionId) {
+      let incomingData = request.resource.data;
+      return isOwner(userId)
+        && incomingData.userId == userId
+        && incomingData.id == transactionId;
+    }
+
+    /**
+     * Validates a Transaction document on update.
+     * Ensures critical relational fields ('id', 'userId') cannot be changed.
+     */
+    function isImmutableTransaction(userId) {
+      let incomingData = request.resource.data;
+      return isExistingOwner(userId)
+        && incomingData.id == resource.data.id
+        && incomingData.userId == resource.data.userId;
+    }
+
+    /**
+     * Validates a new PortfolioAsset document on creation.
+     * Enforces that the asset's internal 'userId' and 'id' fields match the
+     * document's path.
+     */
+    function isValidNewPortfolioAsset(userId, assetId) {
+      let incomingData = request.resource.data;
+      return isOwner(userId)
+        && incomingData.userId == userId
+        && incomingData.id == assetId;
+    }
+
+    /**
+     * Validates a PortfolioAsset document on update.
+     * Ensures critical relational fields ('id', 'userId') cannot be changed.
+     */
+    function isImmutablePortfolioAsset(userId) {
+      let incomingData = request.resource.data;
+      return isExistingOwner(userId)
+        && incomingData.id == resource.data.id
+        && incomingData.userId == resource.data.userId;
+    }
+
+
+    // ------------------------------------------------------------------------
+    // Collection Rules
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Controls access to a user's own profile document.
+     * @path /users/{userId}
+     * @allow (get) A signed-in user reads their own profile: `get /users/user_abc` (auth.uid: `user_abc`).
+     * @deny (list) Any user, signed-in or not, attempts to list all users: `list /users`.
+     * @deny (get) A signed-in user reads another user's profile: `get /users/user_xyz` (auth.uid: `user_abc`).
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isValidNewUser(userId);
+      allow update: if isImmutableUser(userId);
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Controls access to a user's private financial transactions.
+       * @path /users/{userId}/transactions/{transactionId}
+       * @allow (list) A signed-in user lists their own transactions: `list /users/user_abc/transactions` (auth.uid: `user_abc`).
+       * @allow (create) A signed-in user creates a new transaction for themself: `create /users/user_abc/transactions/trans_123` with data `{ userId: "user_abc" }` (auth.uid: `user_abc`).
+       * @deny (get) A signed-in user attempts to read another user's transaction: `get /users/user_xyz/transactions/trans_456` (auth.uid: `user_abc`).
+       * @principle Enforces document ownership within a user-specific subcollection.
+       */
+      match /transactions/{transactionId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isValidNewTransaction(userId, transactionId);
+        allow update: if isImmutableTransaction(userId);
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Controls access to a user's private portfolio of assets.
+       * @path /users/{userId}/portfolio/{assetId}
+       * @allow (list) A signed-in user lists their own portfolio assets: `list /users/user_abc/portfolio` (auth.uid: `user_abc`).
+       * @allow (create) A signed-in user adds a new asset to their portfolio: `create /users/user_abc/portfolio/asset_123` with data `{ userId: "user_abc" }` (auth.uid: `user_abc`).
+       * @deny (get) A signed-in user attempts to read another user's portfolio asset: `get /users/user_xyz/portfolio/asset_456` (auth.uid: `user_abc`).
+       * @principle Enforces document ownership within a user-specific subcollection.
+       */
+      match /portfolio/{assetId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isValidNewPortfolioAsset(userId, assetId);
+        allow update: if isImmutablePortfolioAsset(userId);
+        allow delete: if isExistingOwner(userId);
+      }
+    }
   }
 }
