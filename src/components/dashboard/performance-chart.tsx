@@ -61,11 +61,14 @@ export function PerformanceChart({ transactions }: PerformanceChartProps) {
               <Tooltip 
                 contentStyle={{ 
                     backgroundColor: 'hsl(var(--background))',
-                    borderColor: 'hsl(var(--border))'
+                    borderColor: 'hsl(var(--border))',
+                    opacity: 0.95,
+                    transition: 'opacity 0.3s ease'
                 }}
                 labelStyle={{ color: 'hsl(var(--foreground))' }}
+                cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1.5 }}
               />
-              <Line type="monotone" dataKey="net" stroke={chartTheme.line} strokeWidth={2} dot={{ r: 4, fill: chartTheme.line }} activeDot={{ r: 6 }} animationDuration={1000} />
+              <Line type="monotone" dataKey="net" stroke={chartTheme.line} strokeWidth={2} dot={{ r: 4, fill: chartTheme.line }} activeDot={{ r: 8 }} animationDuration={1000} />
             </LineChart>
           </ResponsiveContainer>
         </div>

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { LucideIcon } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useSpring, animated } from '@react-spring/web';
+import { useState } from 'react';
 
 interface StatCardProps {
   title: string;
@@ -35,28 +36,39 @@ const AnimatedNumber = ({ value, currency = 'USD' }: { value: number, currency?:
   };
 
 export function StatCard({ title, value, icon: Icon, description, currency = 'USD', loading }: StatCardProps) {
-  
+  const [isHovered, setIsHovered] = useState(false);
+  const { scale } = useSpring({
+    scale: isHovered ? 1.05 : 1,
+    config: { tension: 300, friction: 15 },
+  });
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-            <div className="space-y-2">
-                <Skeleton className='h-8 w-3/4' />
-                <Skeleton className='h-4 w-1/2' />
-            </div>
-        ) : (
-            <>
-                <div className="text-2xl font-bold">
-                    <AnimatedNumber value={value} currency={currency} />
-                </div>
-                {description && <p className="text-xs text-muted-foreground">{description}</p>}
-            </>
-        )}
-      </CardContent>
-    </Card>
+    <animated.div
+      style={{ transform: scale.to(s => `scale(${s})`) }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <Card className="transition-shadow duration-300 hover:shadow-lg">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+              <div className="space-y-2">
+                  <Skeleton className='h-8 w-3/4' />
+                  <Skeleton className='h-4 w-1/2' />
+              </div>
+          ) : (
+              <>
+                  <div className="text-2xl font-bold">
+                      <AnimatedNumber value={value} currency={currency} />
+                  </div>
+                  {description && <p className="text-xs text-muted-foreground">{description}</p>}
+              </>
+          )}
+        </CardContent>
+      </Card>
+    </animated.div>
   );
 }

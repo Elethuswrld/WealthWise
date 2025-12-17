@@ -3,7 +3,7 @@
 import { Pie, PieChart, ResponsiveContainer, Cell, Legend, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Asset } from '@/lib/types';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { calculatePortfolioAllocation } from '@/lib/finance';
 import EmptyState from '../empty-state';
 import { PieChart as PieChartIcon } from 'lucide-react';
@@ -16,6 +16,15 @@ const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3
 
 export function PortfolioChart({ assets }: PortfolioChartProps) {
     const data = useMemo(() => calculatePortfolioAllocation(assets || []), [assets]);
+    const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+    const onPieEnter = (_: any, index: number) => {
+        setActiveIndex(index);
+    };
+
+    const onPieLeave = () => {
+        setActiveIndex(null);
+    };
     
     if (!assets || assets.length === 0) {
         return (
@@ -48,13 +57,13 @@ export function PortfolioChart({ assets }: PortfolioChartProps) {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                outerRadius={80}
-                fill="#8884d8"
                 dataKey="value"
                 nameKey="name"
                 isAnimationActive={true}
                 animationDuration={1000}
-                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                onMouseEnter={onPieEnter}
+                onMouseLeave={onPieLeave}
+                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
                     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                     const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
                     const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
@@ -66,7 +75,15 @@ export function PortfolioChart({ assets }: PortfolioChartProps) {
                 }}
               >
                 {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={COLORS[index % COLORS.length]} 
+                    style={{ 
+                        transform: activeIndex === index ? 'scale(1.05)' : 'scale(1)',
+                        transformOrigin: 'center center',
+                        transition: 'transform 0.2s ease-in-out'
+                    }}
+                  />
                 ))}
               </Pie>
               <Tooltip 
