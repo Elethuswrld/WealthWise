@@ -52,6 +52,8 @@ export function PortfolioChart({ assets }: PortfolioChartProps) {
                 fill="#8884d8"
                 dataKey="value"
                 nameKey="name"
+                isAnimationActive={true}
+                animationDuration={1000}
                 label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
                     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                     const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));

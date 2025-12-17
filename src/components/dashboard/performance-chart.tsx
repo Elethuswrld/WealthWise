@@ -65,7 +65,7 @@ export function PerformanceChart({ transactions }: PerformanceChartProps) {
                 }}
                 labelStyle={{ color: 'hsl(var(--foreground))' }}
               />
-              <Line type="monotone" dataKey="net" stroke={chartTheme.line} strokeWidth={2} dot={{ r: 4, fill: chartTheme.line }} activeDot={{ r: 6 }} />
+              <Line type="monotone" dataKey="net" stroke={chartTheme.line} strokeWidth={2} dot={{ r: 4, fill: chartTheme.line }} activeDot={{ r: 6 }} animationDuration={1000} />
             </LineChart>
           </ResponsiveContainer>
         </div>
