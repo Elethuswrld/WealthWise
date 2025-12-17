@@ -9,8 +9,15 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Logo } from '@/components/logo';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
+import { Menu, Home, Wallet, Repeat } from 'lucide-react';
 import Link from 'next/link';
+
+
+const navItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: Home },
+  { href: '/dashboard/transactions', label: 'Transactions', icon: Repeat },
+  { href: '/dashboard/portfolio', label: 'Portfolio', icon: Wallet },
+];
 
 
 export default function DashboardLayout({
@@ -56,10 +63,11 @@ export default function DashboardLayout({
                     </div>
                     <nav className="p-4">
                       <ul className="space-y-2">
-                        {['Dashboard', 'Transactions', 'Portfolio', 'Reports', 'Settings'].map(label => (
-                          <li key={label}>
-                            <Link href={`/dashboard/${label.toLowerCase()}`} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground">
-                              {label}
+                        {navItems.map(item => (
+                          <li key={item.label}>
+                            <Link href={item.href} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground">
+                                <item.icon className="h-5 w-5" />
+                                {item.label}
                             </Link>
                           </li>
                         ))}
