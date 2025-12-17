@@ -1,6 +1,6 @@
 'use server';
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -9,17 +9,21 @@ import {
   signInWithPopup,
   signOut as firebaseSignout,
 } from 'firebase/auth';
-import { getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs, documentId } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 import type { Asset, Transaction } from '@/lib/types';
 import { generatePersonalizedInsights } from '@/ai/flows/generate-personalized-financial-insights';
 import { dummyAssets, dummyTransactions } from '@/lib/dummy-data';
 import type { FinancialSnapshot } from '@/lib/finance';
-import { setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { v4 as uuidv4 } from 'uuid';
 
 // Server-side Firebase initialization
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+let app: FirebaseApp;
+if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+} else {
+    app = getApp();
+}
 const auth = getAuth(app);
 const db = getFirestore(app);
 
@@ -28,27 +32,26 @@ const db = getFirestore(app);
 
 async function createNewUserDocument(user: import('firebase/auth').User) {
     const userRef = doc(db, 'users', user.uid);
-    const userData = {
+    await setDoc(userRef, {
         id: user.uid,
         email: user.email,
         name: user.displayName,
         currency: 'USD',
         createdAt: serverTimestamp(),
-    };
-    setDocumentNonBlocking(userRef, userData, { merge: true });
+    }, { merge: true });
 
     // Populate with dummy data
     const transactionsCollection = collection(db, `users/${user.uid}/transactions`);
-    dummyTransactions.forEach(tx => {
+    for (const tx of dummyTransactions) {
         const docRef = doc(transactionsCollection, uuidv4());
-        addDocumentNonBlocking(docRef, { ...tx, userId: user.uid, id: docRef.id, date: serverTimestamp() });
-    });
+        await setDoc(docRef, { ...tx, userId: user.uid, id: docRef.id, date: serverTimestamp() });
+    }
 
     const assetsCollection = collection(db, `users/${user.uid}/portfolio`);
-    dummyAssets.forEach(asset => {
+    for (const asset of dummyAssets) {
         const docRef = doc(assetsCollection, uuidv4());
-        addDocumentNonBlocking(docRef, { ...asset, userId: user.uid, id: docRef.id });
-    });
+        await setDoc(docRef, { ...asset, userId: user.uid, id: docRef.id });
+    }
 }
 
 export async function signUpWithPassword(formData: FormData) {
@@ -65,17 +68,6 @@ export async function signUpWithPassword(formData: FormData) {
     const user = userCredential.user;
     
     // Manually update profile to include name, as it's not done automatically
-    const userRef = doc(db, 'users', user.uid);
-    const userData = {
-        id: user.uid,
-        email: user.email,
-        name: name, // Use the name from the form
-        currency: 'USD',
-        createdAt: serverTimestamp(),
-    };
-    await setDoc(userRef, userData, { merge: true });
-    
-    // Update user object for createNewUserDocument
     const userWithDisplayName = { ...user, displayName: name };
     await createNewUserDocument(userWithDisplayName);
 
@@ -104,6 +96,8 @@ export async function signInWithPassword(formData: FormData) {
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
   try {
+    // This is tricky in server actions. For this to work, it relies on client-side redirect flow.
+    // A full server-side solution is more complex. Let's assume the popup works in this context for now.
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
 
@@ -111,15 +105,6 @@ export async function signInWithGoogle() {
     const userSnapshot = await getDocs(userQuery);
 
     if (userSnapshot.empty) {
-      // New user, create document and populate data
-      const userRef = doc(db, 'users', user.uid);
-      await setDoc(userRef, {
-          id: user.uid,
-          email: user.email,
-          name: user.displayName,
-          currency: 'USD',
-          createdAt: serverTimestamp(),
-      }, { merge: true });
       await createNewUserDocument(user);
     }
 
@@ -147,20 +132,18 @@ export async function addTransaction(formData: FormData) {
 
     try {
         const transactionId = uuidv4();
-        const newTransaction: Omit<Transaction, 'date' | 'id' | 'userId' > = {
+        const newTransactionData = {
             type: formData.get('type') as Transaction['type'],
             category: formData.get('category') as string,
             amount: parseFloat(formData.get('amount') as string),
             notes: formData.get('notes') as string | undefined,
-        };
-
-        const docRef = doc(db, `users/${userId}/transactions`, transactionId);
-        addDocumentNonBlocking(docRef, {
-            ...newTransaction,
             id: transactionId,
             userId,
             date: serverTimestamp(),
-        });
+        };
+
+        const docRef = doc(db, `users/${userId}/transactions`, transactionId);
+        await setDoc(docRef, newTransactionData);
 
         return { success: true };
     } catch (error: any) {
@@ -174,15 +157,17 @@ export async function addAsset(formData: FormData) {
 
     try {
         const assetId = uuidv4();
-        const newAsset: Omit<Asset, 'id' | 'userId'> = {
+        const newAssetData = {
             assetType: formData.get('assetType') as Asset['assetType'],
             assetName: formData.get('assetName') as string,
             investedAmount: parseFloat(formData.get('investedAmount') as string),
             currentValue: parseFloat(formData.get('currentValue') as string),
+            id: assetId,
+            userId,
         };
 
         const docRef = doc(db, `users/${userId}/portfolio`, assetId);
-        addDocumentNonBlocking(docRef, { ...newAsset, id: assetId, userId });
+        await setDoc(docRef, newAssetData);
 
         return { success: true };
     } catch (error: any) {
