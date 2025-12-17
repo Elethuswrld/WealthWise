@@ -25,10 +25,10 @@ export function StatCard({ title, value, icon: Icon, description, currency = 'US
       </CardHeader>
       <CardContent>
         {loading ? (
-            <>
-            <Skeleton className='h-8 w-3/4 mb-2' />
-            <Skeleton className='h-4 w-1/2' />
-            </>
+            <div className="space-y-2">
+                <Skeleton className='h-8 w-3/4' />
+                <Skeleton className='h-4 w-1/2' />
+            </div>
         ) : (
             <>
                 <div className="text-2xl font-bold">{formattedValue}</div>

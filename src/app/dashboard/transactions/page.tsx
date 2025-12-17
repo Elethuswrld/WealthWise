@@ -74,28 +74,16 @@ export default function TransactionsPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Notes</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {Array.from({ length: 5 }).map((_, i) => (
-                        <TableRow key={i}>
-                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                            <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                            <TableCell className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+            <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center space-x-4 p-4 rounded-md">
+                        <Skeleton className="h-5 w-1/4" />
+                        <Skeleton className="h-6 w-24 rounded-full" />
+                        <Skeleton className="h-5 w-2/4" />
+                        <Skeleton className="h-5 w-1/4" />
+                    </div>
+                ))}
+            </div>
           ) : transactions && transactions.length > 0 ? (
             <Table>
                 <TableHeader>
@@ -109,7 +97,7 @@ export default function TransactionsPage() {
                 </TableHeader>
                 <TableBody>
                     {transactions.map((tx) => (
-                    <TableRow key={tx.id}>
+                    <TableRow key={tx.id} className="transition-colors duration-200 hover:bg-muted/50 cursor-pointer">
                         <TableCell className="font-medium">{tx.category}</TableCell>
                         <TableCell>
                         <Badge variant={getBadgeVariant(tx.type)} className="capitalize">{tx.type}</Badge>

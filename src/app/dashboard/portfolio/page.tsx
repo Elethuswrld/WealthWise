@@ -70,28 +70,16 @@ export default function PortfolioPage() {
         </CardHeader>
         <CardContent>
             {isLoading ? (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Asset Name</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead className="text-right">Current Value</TableHead>
-                            <TableHead className="text-right">Gain / Loss</TableHead>
-                            <TableHead className="text-right">Gain / Loss (%)</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {Array.from({ length: 3 }).map((_, i) => (
-                            <TableRow key={i}>
-                                <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                                <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                                <TableCell className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
-                                <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-                                <TableCell className="text-right"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                <div className="space-y-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="flex items-center space-x-4 p-4 rounded-md">
+                            <Skeleton className="h-5 w-1/4" />
+                            <Skeleton className="h-6 w-24 rounded-full" />
+                            <Skeleton className="h-5 w-1/4 ml-auto" />
+                            <Skeleton className="h-5 w-1/4 ml-auto" />
+                        </div>
+                    ))}
+                </div>
             ) : portfolio && portfolio.length > 0 ? (
                 <Table>
                     <TableHeader>
@@ -111,7 +99,7 @@ export default function PortfolioPage() {
                         const isLoss = gainLoss < 0;
 
                         return (
-                            <TableRow key={asset.id}>
+                            <TableRow key={asset.id} className="transition-colors duration-200 hover:bg-muted/50 cursor-pointer">
                             <TableCell className="font-medium">{asset.assetName}</TableCell>
                             <TableCell>
                                 <Badge variant="secondary" className="capitalize">{asset.assetType}</Badge>
