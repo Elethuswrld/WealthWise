@@ -14,20 +14,22 @@ interface StatCardProps {
   loading?: boolean;
 }
 
-const AnimatedNumber = ({ value, currency = 'USD' }: { value: number, currency: string }) => {
+const AnimatedNumber = ({ value, currency = 'USD' }: { value: number, currency?: string }) => {
     const { number } = useSpring({
       from: { number: 0 },
-      number: value,
+      to: { number: value },
       delay: 200,
       config: { mass: 1, tension: 20, friction: 10 },
     });
   
     return (
       <animated.div>
-        {number.to((n) => new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency,
-        }).format(n))}
+        {number.to((n) => 
+            new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency,
+            }).format(n)
+        )}
       </animated.div>
     );
   };
