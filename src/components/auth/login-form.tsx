@@ -62,6 +62,7 @@ export function LoginForm() {
     
     try {
       const result = await signInWithPopup(auth, provider);
+      // This server action checks if the user is new and creates their document if needed.
       await createNewUserDocument(result.user);
       toast({
         title: 'Success',

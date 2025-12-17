@@ -55,18 +55,6 @@ export async function createNewUserDocument(user: FirebaseUser) {
     }
 }
 
-export async function signOut() {
-  try {
-    const authClient = getAuth();
-    await authClient.signOut();
-    return { success: true };
-  } catch (error: any) {
-    // Note: signOut on the server doesn't really work as expected for the client.
-    // This is here for completeness, but client-side signout is what matters for the UI.
-    return { error: error.message };
-  }
-}
-
 
 // --- Data Actions ---
 
