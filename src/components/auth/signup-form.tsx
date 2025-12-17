@@ -52,8 +52,8 @@ export function SignupForm() {
         title: 'Account Created',
         description: "Welcome! We're redirecting you to your new dashboard.",
       });
-      router.push('/dashboard');
       router.refresh();
+      router.push('/dashboard');
     }
   };
 

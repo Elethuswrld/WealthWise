@@ -47,8 +47,8 @@ export function LoginForm() {
         description: result.error,
       });
     } else {
+      router.refresh();
       router.push('/dashboard');
-      router.refresh(); // Ensure the layout re-renders with the new auth state
     }
   };
 
@@ -64,8 +64,8 @@ export function LoginForm() {
         description: result.error,
       });
     } else {
-      router.push('/dashboard');
       router.refresh();
+      router.push('/dashboard');
     }
   };
 
