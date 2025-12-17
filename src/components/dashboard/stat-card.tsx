@@ -3,6 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { LucideIcon } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
+import { motion, useInView, useSpring } from 'framer-motion';
+import { useEffect, useRef } from 'react';
 
 interface StatCardProps {
   title: string;
@@ -17,13 +19,41 @@ const formatCurrency = (value: number, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency,
+        maximumFractionDigits: 0,
+        minimumFractionDigits: 0,
     }).format(value);
 };
+
+function AnimatedNumber({ value, currency }: { value: number; currency?: string }) {
+    const ref = useRef<HTMLSpanElement>(null);
+    const inView = useInView(ref, { once: true });
+
+    const { number } = useSpring(0, {
+        from: 0,
+        to: inView ? value : 0,
+        config: { duration: 1000 },
+    });
+
+    useEffect(() => {
+        if (inView) {
+            number.set(value);
+        }
+    }, [number, inView, value]);
+
+    const BRL = (val: number) =>
+        `${formatCurrency(val, currency).replace(/(\D+)/, '$1 ')}`;
+
+    return <motion.span ref={ref}>{BRL(value)}</motion.span>;
+}
+
 
 export function StatCard({ title, value, icon: Icon, description, currency = 'USD', loading }: StatCardProps) {
   
   return (
-    <div className="transition-shadow duration-300 hover:shadow-lg rounded-lg transform hover:scale-105">
+    <motion.div
+        whileHover={{ scale: 1.05 }}
+        transition={{ type: "spring", stiffness: 300 }}
+    >
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{title}</CardTitle>
@@ -38,13 +68,13 @@ export function StatCard({ title, value, icon: Icon, description, currency = 'US
           ) : (
               <>
                   <div className="text-2xl font-bold">
-                      {formatCurrency(value, currency)}
+                    <AnimatedNumber value={value} currency={currency} />
                   </div>
                   {description && <p className="text-xs text-muted-foreground">{description}</p>}
               </>
           )}
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   );
 }
