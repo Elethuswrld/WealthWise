@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { signInWithPassword, signInWithGoogle } from '@/app/actions';
+import { useAuth } from '@/firebase';
 import { Loader2 } from 'lucide-react';
+import { createNewUserDocument } from '@/app/actions';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address' }),
@@ -23,6 +25,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
+  const auth = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
@@ -33,39 +36,47 @@ export function LoginForm() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    const formData = new FormData();
-    formData.append('email', data.email);
-    formData.append('password', data.password);
-
-    const result = await signInWithPassword(formData);
-
-    setIsLoading(false);
-    if (result.error) {
+    
+    try {
+      await signInWithEmailAndPassword(auth, data.email, data.password);
+      toast({
+        title: 'Success',
+        description: 'You have successfully logged in.',
+      });
+      router.push('/dashboard');
+      router.refresh();
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: result.error,
+        description: error.message || 'An error occurred during login.',
       });
-    } else {
-      router.refresh();
-      router.push('/dashboard');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    const result = await signInWithGoogle();
-    setIsGoogleLoading(false);
-
-    if (result.error) {
+    const provider = new GoogleAuthProvider();
+    
+    try {
+      const result = await signInWithPopup(auth, provider);
+      await createNewUserDocument(result.user);
+      toast({
+        title: 'Success',
+        description: 'You have successfully logged in with Google.',
+      });
+      router.push('/dashboard');
+      router.refresh();
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Google Sign-In Failed',
-        description: result.error,
+        description: error.message || 'An error occurred during Google sign-in.',
       });
-    } else {
-      router.refresh();
-      router.push('/dashboard');
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 

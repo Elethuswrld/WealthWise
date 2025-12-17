@@ -1,21 +1,17 @@
 'use server';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import type { User as FirebaseUser } from 'firebase/auth';
 import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut as firebaseSignout,
-} from 'firebase/auth';
-import { getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+  getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs,
+} from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 import type { Asset, Transaction } from '@/lib/types';
 import { generatePersonalizedInsights } from '@/ai/flows/generate-personalized-financial-insights';
 import { dummyAssets, dummyTransactions } from '@/lib/dummy-data';
 import type { FinancialSnapshot } from '@/lib/finance';
 import { v4 as uuidv4 } from 'uuid';
+import { getAuth } from 'firebase/auth';
 
 // Server-side Firebase initialization
 let app: FirebaseApp;
@@ -30,95 +26,43 @@ const db = getFirestore(app);
 
 // --- Auth Actions ---
 
-async function createNewUserDocument(user: import('firebase/auth').User) {
+export async function createNewUserDocument(user: FirebaseUser) {
     const userRef = doc(db, 'users', user.uid);
-    await setDoc(userRef, {
-        id: user.uid,
-        email: user.email,
-        name: user.displayName,
-        currency: 'USD',
-        createdAt: serverTimestamp(),
-    }, { merge: true });
-
-    // Populate with dummy data
-    const transactionsCollection = collection(db, `users/${user.uid}/transactions`);
-    for (const tx of dummyTransactions) {
-        const docRef = doc(transactionsCollection, uuidv4());
-        await setDoc(docRef, { ...tx, userId: user.uid, id: docRef.id, date: serverTimestamp() });
-    }
-
-    const assetsCollection = collection(db, `users/${user.uid}/portfolio`);
-    for (const asset of dummyAssets) {
-        const docRef = doc(assetsCollection, uuidv4());
-        await setDoc(docRef, { ...asset, userId: user.uid, id: docRef.id });
-    }
-}
-
-export async function signUpWithPassword(formData: FormData) {
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
-  const name = formData.get('name') as string;
-
-  if (!email || !password || !name) {
-    return { error: 'Missing fields' };
-  }
-
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+    const userSnap = await getDocs(query(collection(db, 'users'), where('id', '==', user.uid)));
     
-    // Manually update profile to include name, as it's not done automatically
-    const userWithDisplayName = { ...user, displayName: name };
-    await createNewUserDocument(userWithDisplayName);
+    // Only create if the user document doesn't exist
+    if (userSnap.empty) {
+        await setDoc(userRef, {
+            id: user.uid,
+            email: user.email,
+            name: user.displayName,
+            currency: 'USD',
+            createdAt: serverTimestamp(),
+        }, { merge: true });
 
-    return { success: true };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-}
+        // Populate with dummy data
+        const transactionsCollection = collection(db, `users/${user.uid}/transactions`);
+        for (const tx of dummyTransactions) {
+            const docRef = doc(transactionsCollection, uuidv4());
+            await setDoc(docRef, { ...tx, userId: user.uid, id: docRef.id, date: serverTimestamp() });
+        }
 
-export async function signInWithPassword(formData: FormData) {
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
-
-  if (!email || !password) {
-    return { error: 'Email and password are required' };
-  }
-
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-    return { success: true };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-}
-
-export async function signInWithGoogle() {
-  const provider = new GoogleAuthProvider();
-  try {
-    // This is tricky in server actions. For this to work, it relies on client-side redirect flow.
-    // A full server-side solution is more complex. Let's assume the popup works in this context for now.
-    const result = await signInWithPopup(auth, provider);
-    const user = result.user;
-
-    const userQuery = query(collection(db, 'users'), where('id', '==', user.uid));
-    const userSnapshot = await getDocs(userQuery);
-
-    if (userSnapshot.empty) {
-      await createNewUserDocument(user);
+        const assetsCollection = collection(db, `users/${user.uid}/portfolio`);
+        for (const asset of dummyAssets) {
+            const docRef = doc(assetsCollection, uuidv4());
+            await setDoc(docRef, { ...asset, userId: user.uid, id: docRef.id });
+        }
     }
-
-    return { success: true, user: result.user };
-  } catch (error: any) {
-    return { error: error.message };
-  }
 }
 
 export async function signOut() {
   try {
-    await firebaseSignout(auth);
+    const authClient = getAuth();
+    await authClient.signOut();
     return { success: true };
   } catch (error: any) {
+    // Note: signOut on the server doesn't really work as expected for the client.
+    // This is here for completeness, but client-side signout is what matters for the UI.
     return { error: error.message };
   }
 }
