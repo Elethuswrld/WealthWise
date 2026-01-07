@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Asset, WithId } from '@/lib/types';
 import {
@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { AddDataDialog } from '@/components/dashboard/add-data-dialog';
-import { ArrowUpRight, ArrowDownRight, Minus, Wallet, MoreHorizontal, Trash2, Pencil } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus, Wallet, MoreHorizontal, Trash2, Pencil, ArrowUpDown } from 'lucide-react';
 import { collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/empty-state';
@@ -42,6 +42,10 @@ const formatPercent = (value: number) => {
     }).format(value);
   };
 
+type SortKey = 'assetName' | 'assetType' | 'currentValue' | 'gainLoss' | 'gainLossPercent';
+type SortDirection = 'asc' | 'desc';
+
+
 export default function PortfolioPage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -53,6 +57,9 @@ export default function PortfolioPage() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>('currentValue');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
 
   const portfolioQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -60,6 +67,48 @@ export default function PortfolioPage() {
   }, [firestore, user]);
 
   const { data: portfolio, isLoading } = useCollection<Asset>(portfolioQuery);
+
+  const sortedPortfolio = useMemo(() => {
+    if (!portfolio) return [];
+    
+    return [...portfolio].sort((a, b) => {
+        let valA, valB;
+
+        if (sortKey === 'gainLoss') {
+            valA = a.currentValue - a.investedAmount;
+            valB = b.currentValue - b.investedAmount;
+        } else if (sortKey === 'gainLossPercent') {
+            valA = a.investedAmount === 0 ? 0 : (a.currentValue - a.investedAmount) / a.investedAmount;
+            valB = b.investedAmount === 0 ? 0 : (b.currentValue - b.investedAmount) / b.investedAmount;
+        } else {
+            valA = a[sortKey];
+            valB = b[sortKey];
+        }
+
+        let result = 0;
+        if (valA < valB) {
+            result = -1;
+        } else if (valA > valB) {
+            result = 1;
+        }
+        
+        return sortDirection === 'asc' ? result : -result;
+    });
+  }, [portfolio, sortKey, sortDirection]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+        setSortKey(key);
+        setSortDirection('desc');
+    }
+  };
+
+  const renderSortIcon = (key: SortKey) => {
+    if (sortKey !== key) return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
+    return sortDirection === 'desc' ? '▼' : '▲';
+  };
 
   const handleEdit = (asset: WithId<Asset>) => {
     setDialogData({ asset });
@@ -122,20 +171,30 @@ export default function PortfolioPage() {
                         </div>
                     ))}
                 </div>
-            ) : portfolio && portfolio.length > 0 ? (
+            ) : sortedPortfolio && sortedPortfolio.length > 0 ? (
                 <Table>
                     <TableHeader>
                     <TableRow>
-                        <TableHead>Asset Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead className="text-right">Current Value</TableHead>
-                        <TableHead className="text-right">Gain / Loss</TableHead>
-                        <TableHead className="text-right">Gain / Loss (%)</TableHead>
+                        <TableHead>
+                            <Button variant="ghost" onClick={() => handleSort('assetName')}>Asset Name {renderSortIcon('assetName')}</Button>
+                        </TableHead>
+                        <TableHead>
+                             <Button variant="ghost" onClick={() => handleSort('assetType')}>Type {renderSortIcon('assetType')}</Button>
+                        </TableHead>
+                        <TableHead className="text-right">
+                             <Button variant="ghost" onClick={() => handleSort('currentValue')}>Current Value {renderSortIcon('currentValue')}</Button>
+                        </TableHead>
+                        <TableHead className="text-right">
+                            <Button variant="ghost" onClick={() => handleSort('gainLoss')}>Gain / Loss {renderSortIcon('gainLoss')}</Button>
+                        </TableHead>
+                        <TableHead className="text-right">
+                            <Button variant="ghost" onClick={() => handleSort('gainLossPercent')}>Gain / Loss (%) {renderSortIcon('gainLossPercent')}</Button>
+                        </TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {portfolio.map((asset) => {
+                        {sortedPortfolio.map((asset) => {
                         const gainLoss = asset.currentValue - asset.investedAmount;
                         const gainLossPercent = asset.investedAmount === 0 ? 0 : gainLoss / asset.investedAmount;
                         const isGain = gainLoss > 0;
