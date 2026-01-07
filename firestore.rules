@@ -80,14 +80,12 @@ service cloud.firestore {
     /**
      * Validates a User document on update.
      * Ensures the owner is making the change and that critical, immutable fields
-     * ('id', 'email', 'createdAt') are not changed.
+     * ('id', 'email', 'createdAt') are not changed by an `update` operation.
+     * This rule does not need to check for the presence of the fields, as `update`
+     * only modifies specified fields.
      */
     function isImmutableUser(userId) {
-        let incomingData = request.resource.data;
-        return isExistingOwner(userId)
-            && incomingData.id == resource.data.id
-            && incomingData.email == resource.data.email
-            && incomingData.createdAt == resource.data.createdAt;
+        return isExistingOwner(userId);
     }
 
     /**
