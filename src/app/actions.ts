@@ -205,7 +205,7 @@ export async function deleteAsset(assetId: string) {
 
         return { success: true };
     } catch (error: any) {
-        return { error: error..message };
+        return { error: error.message };
     }
 }
 
