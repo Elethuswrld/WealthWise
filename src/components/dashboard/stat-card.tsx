@@ -28,22 +28,29 @@ function AnimatedNumber({ value, currency }: { value: number; currency?: string 
     const ref = useRef<HTMLSpanElement>(null);
     const inView = useInView(ref, { once: true });
 
-    const { number } = useSpring(0, {
-        from: 0,
-        to: inView ? value : 0,
-        config: { duration: 1000 },
+    // useSpring returns the MotionValue directly
+    const springValue = useSpring(0, {
+        stiffness: 100,
+        damping: 30,
+        restDelta: 0.001
     });
 
     useEffect(() => {
         if (inView) {
-            number.set(value);
+            springValue.set(value);
         }
-    }, [number, inView, value]);
+    }, [springValue, inView, value]);
 
-    const BRL = (val: number) =>
-        `${formatCurrency(val, currency).replace(/(\D+)/, '$1 ')}`;
+    const displayValue = useRef<string>(formatCurrency(0, currency));
 
-    return <motion.span ref={ref}>{BRL(value)}</motion.span>;
+    useEffect(() => springValue.on("change", (latest) => {
+        if (ref.current) {
+            ref.current.textContent = formatCurrency(latest, currency);
+        }
+    }), [springValue, currency]);
+
+
+    return <span ref={ref}>{displayValue.current}</span>;
 }
 
 
