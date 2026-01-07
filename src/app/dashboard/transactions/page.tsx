@@ -18,7 +18,7 @@ import { AddDataDialog } from '@/components/dashboard/add-data-dialog';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/empty-state';
-import { Repeat, MoreHorizontal, Trash2, Pencil } from 'lucide-react';
+import { Repeat, MoreHorizontal, Trash2, Pencil, ArrowUpDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useState, useMemo } from 'react';
@@ -49,6 +49,9 @@ const getBadgeVariant = (type: Transaction['type']) => {
   }
 };
 
+type SortKey = 'category' | 'type' | 'amount' | 'date';
+type SortDirection = 'asc' | 'desc';
+
 export default function TransactionsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -61,6 +64,9 @@ export default function TransactionsPage() {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [sortKey, setSortKey] = useState<SortKey>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
 
   const transactionsQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -74,6 +80,37 @@ export default function TransactionsPage() {
     if (filter === 'all') return transactions;
     return transactions.filter((tx) => tx.type === filter);
   }, [transactions, filter]);
+
+  const sortedTransactions = useMemo(() => {
+    return [...filteredTransactions].sort((a, b) => {
+        let valA = a[sortKey];
+        let valB = b[sortKey];
+
+        // Handle Firestore Timestamps for dates
+        if (sortKey === 'date') {
+            valA = a.date?.seconds || 0;
+            valB = b.date?.seconds || 0;
+        }
+
+        let result = 0;
+        if (valA < valB) {
+            result = -1;
+        } else if (valA > valB) {
+            result = 1;
+        }
+        
+        return sortDirection === 'asc' ? result : -result;
+    });
+  }, [filteredTransactions, sortKey, sortDirection]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+        setSortKey(key);
+        setSortDirection('desc');
+    }
+  };
 
 
   const handleEdit = (transaction: WithId<Transaction>) => {
@@ -100,6 +137,11 @@ export default function TransactionsPage() {
     }
     setIsAlertOpen(false);
     setItemToDelete(null);
+  };
+
+  const renderSortIcon = (key: SortKey) => {
+    if (sortKey !== key) return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
+    return sortDirection === 'desc' ? '▼' : '▲';
   };
 
 
@@ -143,20 +185,36 @@ export default function TransactionsPage() {
                     </div>
                 ))}
             </div>
-          ) : filteredTransactions && filteredTransactions.length > 0 ? (
+          ) : sortedTransactions && sortedTransactions.length > 0 ? (
             <Table>
                 <TableHeader>
                 <TableRow>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Type</TableHead>
+                    <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('category')}>
+                            Category {renderSortIcon('category')}
+                        </Button>
+                    </TableHead>
+                    <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('type')}>
+                            Type {renderSortIcon('type')}
+                        </Button>
+                    </TableHead>
                     <TableHead>Notes</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('date')}>
+                            Date {renderSortIcon('date')}
+                        </Button>
+                    </TableHead>
+                    <TableHead className="text-right">
+                        <Button variant="ghost" onClick={() => handleSort('amount')}>
+                            Amount {renderSortIcon('amount')}
+                        </Button>
+                    </TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {filteredTransactions.map((tx) => (
+                    {sortedTransactions.map((tx) => (
                     <TableRow key={tx.id}>
                         <TableCell className="font-medium">{tx.category}</TableCell>
                         <TableCell>
