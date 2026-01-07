@@ -7,7 +7,7 @@ import { Sidebar } from '@/components/sidebar';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Logo } from '@/components/logo';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Menu, Home, Wallet, Repeat } from 'lucide-react';
 import Link from 'next/link';
@@ -57,9 +57,13 @@ export default function DashboardLayout({
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="left" className="p-0 w-64">
-                    <div className="p-4">
-                      <Logo />
-                    </div>
+                    <SheetHeader className="p-4">
+                        <SheetTitle className="sr-only">Main Menu</SheetTitle>
+                        <SheetDescription className="sr-only">
+                            Navigation links for the application dashboard.
+                        </SheetDescription>
+                        <Logo />
+                    </SheetHeader>
                     <nav className="p-4">
                       <ul className="space-y-2">
                         {navItems.map(item => (
