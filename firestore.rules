@@ -87,7 +87,9 @@ service cloud.firestore {
       return isOwner(userId)
             && incomingData.id == resource.data.id
             && incomingData.email == resource.data.email
-            && incomingData.createdAt == resource.data.createdAt;
+            && incomingData.createdAt == resource.data.createdAt
+            && incomingData.name is string
+            && incomingData.currency is string;
     }
 
     /**
