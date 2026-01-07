@@ -18,7 +18,8 @@ import {
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
+import Link from 'next/link';
 
 export function UserNav() {
   const { user } = useUser();
@@ -75,8 +76,14 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          {/* Add more items here if needed, e.g. Profile, Settings */}
+           <Link href="/dashboard/settings">
+              <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+            </Link>
         </DropdownMenuGroup>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>

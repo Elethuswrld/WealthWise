@@ -9,7 +9,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Logo } from '@/components/logo';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, Home, Wallet, Repeat } from 'lucide-react';
+import { Menu, Home, Wallet, Repeat, Settings } from 'lucide-react';
 import Link from 'next/link';
 
 
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/dashboard/transactions', label: 'Transactions', icon: Repeat },
   { href: '/dashboard/portfolio', label: 'Portfolio', icon: Wallet },
+  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
 
@@ -57,13 +58,13 @@ export default function DashboardLayout({
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="left" className="p-0 w-64">
-                    <SheetHeader className="p-4">
-                        <SheetTitle className="sr-only">Main Menu</SheetTitle>
-                        <SheetDescription className="sr-only">
-                            Navigation links for the application dashboard.
-                        </SheetDescription>
-                        <Logo />
+                    <SheetHeader className="p-4 border-b">
+                       <Logo />
                     </SheetHeader>
+                    <SheetTitle className="sr-only">Main Menu</SheetTitle>
+                    <SheetDescription className="sr-only">
+                        Navigation links for the application dashboard.
+                    </SheetDescription>
                     <nav className="p-4">
                       <ul className="space-y-2">
                         {navItems.map(item => (

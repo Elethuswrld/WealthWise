@@ -11,7 +11,7 @@ import { generatePersonalizedInsights } from '@/ai/flows/generate-personalized-f
 import { dummyAssets, dummyTransactions } from '@/lib/dummy-data';
 import type { FinancialSnapshot } from '@/lib/finance';
 import { v4 as uuidv4 } from 'uuid';
-import { getAuth } from 'firebase/auth';
+import { getAuth, updateProfile } from 'firebase/auth';
 
 // Server-side Firebase initialization
 let app: FirebaseApp;
@@ -30,7 +30,6 @@ export async function createNewUserDocument(user: FirebaseUser) {
     const userRef = doc(db, 'users', user.uid);
     const userSnap = await getDocs(query(collection(db, 'users'), where('id', '==', user.uid)));
     
-    // Only create if the user document doesn't exist
     if (userSnap.empty) {
         await setDoc(userRef, {
             id: user.uid,
@@ -52,6 +51,38 @@ export async function createNewUserDocument(user: FirebaseUser) {
             const docRef = doc(assetsCollection, uuidv4());
             await setDoc(docRef, { ...asset, userId: user.uid, id: docRef.id });
         }
+    }
+}
+
+export async function updateUserProfile(formData: FormData) {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return { error: 'User not authenticated' };
+
+    try {
+        const name = formData.get('name') as string;
+        const currency = formData.get('currency') as string;
+
+        // We should not allow name to be null or empty
+        if (!name || name.trim().length < 2) {
+            return { error: 'Name must be at least 2 characters long.' };
+        }
+
+        // Update Firebase Auth display name
+        if (auth.currentUser) {
+            await updateProfile(auth.currentUser, { displayName: name });
+        }
+
+        // Update Firestore user document
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
+            name: name,
+            currency: currency,
+        });
+
+        return { success: true };
+
+    } catch (error: any) {
+        return { error: error.message };
     }
 }
 
@@ -174,7 +205,7 @@ export async function deleteAsset(assetId: string) {
 
         return { success: true };
     } catch (error: any) {
-        return { error: error.message };
+        return { error: error..message };
     }
 }
 
