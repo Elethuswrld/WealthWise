@@ -143,6 +143,41 @@ export async function addAsset(formData: FormData) {
     }
 }
 
+export async function updateAsset(assetId: string, formData: FormData) {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return { error: 'User not authenticated' };
+
+    try {
+        const updatedAssetData = {
+            assetType: formData.get('assetType') as Asset['assetType'],
+            assetName: formData.get('assetName') as string,
+            investedAmount: parseFloat(formData.get('investedAmount') as string),
+            currentValue: parseFloat(formData.get('currentValue') as string),
+        };
+
+        const docRef = doc(db, `users/${userId}/portfolio`, assetId);
+        await updateDoc(docRef, updatedAssetData);
+
+        return { success: true };
+    } catch (error: any) {
+        return { error: error.message };
+    }
+}
+
+export async function deleteAsset(assetId: string) {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return { error: 'User not authenticated' };
+
+    try {
+        const docRef = doc(db, `users/${userId}/portfolio`, assetId);
+        await deleteDoc(docRef);
+
+        return { success: true };
+    } catch (error: any) {
+        return { error: error.message };
+    }
+}
+
 
 // --- GenAI Action ---
 export async function getAIFinancialInsights(input: FinancialSnapshot) {

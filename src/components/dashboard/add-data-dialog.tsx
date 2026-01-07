@@ -21,11 +21,11 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { addTransaction, addAsset, updateTransaction } from '@/app/actions';
+import { addTransaction, addAsset, updateTransaction, updateAsset } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import type { WithId, Transaction } from '@/lib/types';
+import type { WithId, Transaction, Asset } from '@/lib/types';
 
 interface AddTransactionFormProps {
     onFinished: () => void;
@@ -94,23 +94,31 @@ function AddTransactionForm({ onFinished, initialData }: AddTransactionFormProps
   );
 }
 
-function AddAssetForm({ onFinished }: { onFinished: () => void }) {
+interface AddAssetFormProps {
+    onFinished: () => void;
+    initialData?: WithId<Asset>;
+}
+
+function AddAssetForm({ onFinished, initialData }: AddAssetFormProps) {
     const { toast } = useToast();
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const isEditing = !!initialData;
   
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       setIsLoading(true);
   
       const formData = new FormData(event.currentTarget);
-      const result = await addAsset(formData);
+      const result = isEditing
+        ? await updateAsset(initialData.id, formData)
+        : await addAsset(formData);
   
       setIsLoading(false);
       if (result.error) {
         toast({ variant: 'destructive', title: 'Error', description: result.error });
       } else {
-        toast({ title: 'Success', description: 'Asset added.' });
+        toast({ title: 'Success', description: `Asset ${isEditing ? 'updated' : 'added'}.` });
         onFinished();
         router.refresh();
       }
@@ -120,7 +128,7 @@ function AddAssetForm({ onFinished }: { onFinished: () => void }) {
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
                 <Label htmlFor="asset-type">Asset Type</Label>
-                <Select name="assetType" required>
+                <Select name="assetType" required defaultValue={initialData?.assetType}>
                     <SelectTrigger id="asset-type"><SelectValue placeholder="Select type" /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="Cash">Cash</SelectItem>
@@ -133,22 +141,22 @@ function AddAssetForm({ onFinished }: { onFinished: () => void }) {
             </div>
             <div className="space-y-2">
                 <Label htmlFor="asset-name">Asset Name</Label>
-                <Input id="asset-name" name="assetName" placeholder="e.g., Apple Inc., Bitcoin" required />
+                <Input id="asset-name" name="assetName" placeholder="e.g., Apple Inc., Bitcoin" required defaultValue={initialData?.assetName} />
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="invested-amount">Invested Amount</Label>
-                    <Input id="invested-amount" name="investedAmount" type="number" step="0.01" placeholder="0.00" required />
+                    <Input id="invested-amount" name="investedAmount" type="number" step="0.01" placeholder="0.00" required defaultValue={initialData?.investedAmount} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="current-value">Current Value</Label>
-                    <Input id="current-value" name="currentValue" type="number" step="0.01" placeholder="0.00" required />
+                    <Input id="current-value" name="currentValue" type="number" step="0.01" placeholder="0.00" required defaultValue={initialData?.currentValue} />
                 </div>
             </div>
             <div className="flex justify-end">
                 <Button type="submit" disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Add Asset
+                    {isEditing ? 'Save Changes' : 'Add Asset'}
                 </Button>
             </div>
         </form>
@@ -160,7 +168,7 @@ interface AddDataDialogProps {
     onOpenChange?: (open: boolean) => void;
     initialData?: {
         transaction?: WithId<Transaction>;
-        asset?: any; // Replace with Asset type when implemented
+        asset?: WithId<Asset>;
     } | null;
 }
 
@@ -213,6 +221,7 @@ export function AddDataDialog({ open, onOpenChange, initialData }: AddDataDialog
             <TabsContent value="asset" className="py-4">
                 <AddAssetForm 
                     onFinished={() => setCurrentOpen(false)}
+                    initialData={initialData?.asset}
                 />
             </TabsContent>
         </Tabs>
