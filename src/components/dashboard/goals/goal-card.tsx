@@ -65,7 +65,7 @@ export function GoalCard({ goal, onEdit }: GoalCardProps) {
               {goal.targetDate && (
                 <CardDescription className="flex items-center gap-1.5 text-xs">
                   <Calendar className="h-3 w-3" />
-                  Target: {format(goal.targetDate.toDate(), 'MMM d, yyyy')}
+                  Target: {goal.targetDate.toDate ? format(goal.targetDate.toDate(), 'MMM d, yyyy') : 'N/A'}
                 </CardDescription>
               )}
             </div>
