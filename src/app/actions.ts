@@ -67,8 +67,6 @@ export async function updateUserProfile(userId: string, formData: FormData) {
 
         const userRef = doc(db, 'users', userId);
         
-        // Use updateDoc to only change the mutable fields.
-        // This avoids conflicts with security rules that protect immutable fields.
         await updateDoc(userRef, {
             name: name,
             currency: currency,

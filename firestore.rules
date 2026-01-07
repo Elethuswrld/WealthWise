@@ -78,16 +78,6 @@ service cloud.firestore {
     }
 
     /**
-     * Validates a User document on update.
-     * This rule only needs to check for ownership, as `update` operations only
-     * modify specified fields. Immutable fields are protected because they are
-     * not included in the client-side update call.
-     */
-    function isImmutableUser(userId) {
-        return isExistingOwner(userId);
-    }
-
-    /**
      * Validates a new Transaction document on creation.
      * Enforces that the transaction's internal 'userId' and 'id' fields match the
      * document's path, creating an unbreakable link to the owner and its own identity.
@@ -174,8 +164,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId); // Simplified for initial creation.
-      allow update: if isImmutableUser(userId);
+      allow create: if isValidNewUser(userId);
+      allow update: if isOwner(userId);
       allow delete: if isExistingOwner(userId);
 
       /**
