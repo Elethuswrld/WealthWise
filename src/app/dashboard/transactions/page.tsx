@@ -1,7 +1,7 @@
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import type { Transaction } from '@/lib/types';
+import type { Transaction, WithId } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -18,7 +18,14 @@ import { AddDataDialog } from '@/components/dashboard/add-data-dialog';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/empty-state';
-import { Repeat } from 'lucide-react';
+import { Repeat, MoreHorizontal, Trash2, Pencil } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { deleteTransaction } from '@/app/actions';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 
 const formatCurrency = (amount: number) => {
@@ -44,6 +51,14 @@ const getBadgeVariant = (type: Transaction['type']) => {
 export default function TransactionsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const [dialogData, setDialogData] = useState<{ transaction?: WithId<Transaction>, asset?: any } | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const transactionsQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -51,6 +66,33 @@ export default function TransactionsPage() {
   }, [firestore, user]);
 
   const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
+
+  const handleEdit = (transaction: WithId<Transaction>) => {
+    setDialogData({ transaction });
+    setIsDialogOpen(true);
+  };
+
+  const handleDeleteInitiate = (transactionId: string) => {
+    setItemToDelete(transactionId);
+    setIsAlertOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
+    const result = await deleteTransaction(itemToDelete);
+    setIsDeleting(false);
+
+    if (result.error) {
+        toast({ variant: 'destructive', title: 'Error', description: result.error });
+    } else {
+        toast({ title: 'Success', description: 'Transaction deleted.' });
+        router.refresh();
+    }
+    setIsAlertOpen(false);
+    setItemToDelete(null);
+  };
+
 
   return (
     <div className="space-y-8">
@@ -63,7 +105,7 @@ export default function TransactionsPage() {
             A complete history of your financial activities.
           </p>
         </div>
-        <AddDataDialog />
+        <Button onClick={() => { setDialogData(null); setIsDialogOpen(true); }}>Add New</Button>
       </div>
       <Card>
         <CardHeader>
@@ -93,11 +135,12 @@ export default function TransactionsPage() {
                     <TableHead>Notes</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
                     {transactions.map((tx) => (
-                    <TableRow key={tx.id} className="transition-colors duration-200 hover:bg-muted/50 cursor-pointer">
+                    <TableRow key={tx.id}>
                         <TableCell className="font-medium">{tx.category}</TableCell>
                         <TableCell>
                         <Badge variant={getBadgeVariant(tx.type)} className="capitalize">{tx.type}</Badge>
@@ -112,6 +155,24 @@ export default function TransactionsPage() {
                         )}>
                         {tx.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(tx.amount))}
                         </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onSelect={() => handleEdit(tx)}>
+                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleDeleteInitiate(tx.id)} className="text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
                     </TableRow>
                     ))}
                 </TableBody>
@@ -125,6 +186,27 @@ export default function TransactionsPage() {
           )}
         </CardContent>
       </Card>
+      <AddDataDialog 
+        open={isDialogOpen} 
+        onOpenChange={setIsDialogOpen} 
+        initialData={dialogData}
+      />
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the transaction.
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteConfirm} disabled={isDeleting}>
+                    {isDeleting ? 'Deleting...' : 'Delete'}
+                  </AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

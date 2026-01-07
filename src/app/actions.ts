@@ -3,7 +3,7 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import type { User as FirebaseUser } from 'firebase/auth';
 import {
-  getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs,
+  getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs, updateDoc, deleteDoc,
 } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 import type { Asset, Transaction } from '@/lib/types';
@@ -82,6 +82,42 @@ export async function addTransaction(formData: FormData) {
         return { error: error.message };
     }
 }
+
+export async function updateTransaction(transactionId: string, formData: FormData) {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return { error: 'User not authenticated' };
+  
+    try {
+      const updatedTransactionData = {
+        type: formData.get('type') as Transaction['type'],
+        category: formData.get('category') as string,
+        amount: parseFloat(formData.get('amount') as string),
+        notes: formData.get('notes') as string | undefined,
+      };
+  
+      const docRef = doc(db, `users/${userId}/transactions`, transactionId);
+      await updateDoc(docRef, updatedTransactionData);
+  
+      return { success: true };
+    } catch (error: any) {
+      return { error: error.message };
+    }
+  }
+  
+  export async function deleteTransaction(transactionId: string) {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return { error: 'User not authenticated' };
+  
+    try {
+      const docRef = doc(db, `users/${userId}/transactions`, transactionId);
+      await deleteDoc(docRef);
+  
+      return { success: true };
+    } catch (error: any) {
+      return { error: error.message };
+    }
+  }
+
 
 export async function addAsset(formData: FormData) {
     const userId = auth.currentUser?.uid;
