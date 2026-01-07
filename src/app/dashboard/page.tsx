@@ -42,7 +42,6 @@ export default function DashboardPage() {
   const { data: recentTransactions, isLoading: recentTransactionsLoading, error: recentTransactionsError } = useCollection<Transaction>(recentTransactionsQuery);
   
   const isLoading = portfolioLoading || transactionsLoading;
-  const isError = portfolioError || transactionsError;
 
   const netWorth = portfolio ? calculateNetWorth(portfolio) : 0;
   const { income, expenses, profitLoss } = transactions ? calculateCurrentMonthSummary(transactions) : { income: 0, expenses: 0, profitLoss: 0 };
