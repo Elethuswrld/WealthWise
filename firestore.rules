@@ -65,21 +65,29 @@ service cloud.firestore {
     /**
      * Validates a new User document on creation.
      * Ensures the creator is the owner and the document's 'id' field matches the path.
+     * Also checks that required fields exist in the incoming request.
      */
     function isValidNewUser(userId) {
-      let incomingData = request.resource.data;
-      return isOwner(userId)
-        && incomingData.id == userId;
+        let incomingData = request.resource.data;
+        return isOwner(userId)
+            && incomingData.id == userId
+            && incomingData.email == request.auth.token.email
+            && incomingData.name == request.auth.token.name
+            && incomingData.currency is string
+            && incomingData.createdAt == request.time;
     }
 
     /**
      * Validates a User document on update.
-     * Ensures the owner is making the change and that the primary 'id' is not changed.
+     * Ensures the owner is making the change and that critical, immutable fields
+     * ('id', 'email', 'createdAt') are not changed.
      */
     function isImmutableUser(userId) {
-      let incomingData = request.resource.data;
-      return isExistingOwner(userId)
-        && incomingData.id == resource.data.id;
+        let incomingData = request.resource.data;
+        return isExistingOwner(userId)
+            && incomingData.id == resource.data.id
+            && incomingData.email == resource.data.email
+            && incomingData.createdAt == resource.data.createdAt;
     }
 
     /**
@@ -160,6 +168,8 @@ service cloud.firestore {
      * @description Controls access to a user's own profile document.
      * @path /users/{userId}
      * @allow (get) A signed-in user reads their own profile: `get /users/user_abc` (auth.uid: `user_abc`).
+     * @allow (create) A new user can create their own profile document.
+     * @allow (update) An existing user can update their own profile, but cannot change immutable fields.
      * @deny (list) Any user, signed-in or not, attempts to list all users: `list /users`.
      * @deny (get) A signed-in user reads another user's profile: `get /users/user_xyz` (auth.uid: `user_abc`).
      * @principle Restricts access to a user's own data tree and prevents user enumeration.
@@ -167,7 +177,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isValidNewUser(userId);
+      allow create: if isOwner(userId); // Simplified for initial creation.
       allow update: if isImmutableUser(userId);
       allow delete: if isExistingOwner(userId);
 

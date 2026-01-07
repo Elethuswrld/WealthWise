@@ -6,12 +6,12 @@ import {
   getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs, updateDoc, deleteDoc, Timestamp, getDoc,
 } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
-import type { Asset, Goal, Transaction } from '@/lib/types';
+import type { Asset, Goal, Transaction, UserProfile } from '@/lib/types';
 import { generatePersonalizedInsights } from '@/ai/flows/generate-personalized-financial-insights.ts';
 import { dummyAssets, dummyTransactions } from '@/lib/dummy-data';
 import type { FinancialSnapshot } from '@/lib/finance';
 import { v4 as uuidv4 } from 'uuid';
-import { getAuth, updateProfile } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 
 // Server-side Firebase initialization
 let app: FirebaseApp;
@@ -66,23 +66,12 @@ export async function updateUserProfile(userId: string, formData: FormData) {
         }
 
         const userRef = doc(db, 'users', userId);
-        const userSnap = await getDoc(userRef);
-
-        if (!userSnap.exists()) {
-            return { error: 'User document not found.' };
-        }
         
-        const existingData = userSnap.data();
-
-        // We can't update Firebase Auth user from server action without admin sdk, 
-        // which is not set up. Client will handle this.
-
-        // Update Firestore user document
-        await setDoc(userRef, {
-            ...existingData, // Preserve existing fields
+        // Update only the mutable fields.
+        await updateDoc(userRef, {
             name: name,
             currency: currency,
-        }, { merge: true });
+        });
 
         return { success: true };
 

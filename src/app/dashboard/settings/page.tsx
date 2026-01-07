@@ -97,8 +97,8 @@ export default function SettingsPage() {
     formData.append('currency', data.currency);
 
     try {
-        // Update auth profile on the client
-        if (auth.currentUser) {
+        // Update auth profile on the client for immediate UI feedback
+        if (auth.currentUser && auth.currentUser.displayName !== data.name) {
             await updateProfile(auth.currentUser, { displayName: data.name });
         }
         
@@ -110,10 +110,10 @@ export default function SettingsPage() {
         }
 
         toast({ title: 'Success', description: 'Your profile has been updated.' });
-        router.refresh();
+        router.refresh(); // This will re-fetch server components and reflect changes like the user's name in the nav
 
     } catch(error: any) {
-        toast({ variant: 'destructive', title: 'Error', description: error.message });
+        toast({ variant: 'destructive', title: 'Error updating profile', description: error.message });
     } finally {
         setIsLoading(false);
     }
