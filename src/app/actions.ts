@@ -3,7 +3,7 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import type { User as FirebaseUser } from 'firebase/auth';
 import {
-  getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs, updateDoc, deleteDoc, Timestamp,
+  getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs, updateDoc, deleteDoc, Timestamp, getDoc,
 } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 import type { Asset, Goal, Transaction } from '@/lib/types';
@@ -61,24 +61,33 @@ export async function updateUserProfile(userId: string, formData: FormData) {
         const name = formData.get('name') as string;
         const currency = formData.get('currency') as string;
 
-        // We should not allow name to be null or empty
         if (!name || name.trim().length < 2) {
             return { error: 'Name must be at least 2 characters long.' };
         }
+
+        const userRef = doc(db, 'users', userId);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+            return { error: 'User document not found.' };
+        }
+        
+        const existingData = userSnap.data();
 
         // We can't update Firebase Auth user from server action without admin sdk, 
         // which is not set up. Client will handle this.
 
         // Update Firestore user document
-        const userRef = doc(db, 'users', userId);
-        await updateDoc(userRef, {
+        await setDoc(userRef, {
+            ...existingData, // Preserve existing fields
             name: name,
             currency: currency,
-        });
+        }, { merge: true });
 
         return { success: true };
 
     } catch (error: any) {
+        console.error(error);
         return { error: error.message };
     }
 }
