@@ -48,13 +48,20 @@ export default function DashboardPage() {
   const financialSnapshot: FinancialSnapshot | null = transactions && portfolio ? createFinancialSnapshot(transactions, portfolio) : null;
   
   const containerVariants = {
-    hidden: {},
-    visible: { transition: { staggerChildren: 0.2 } },
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { staggerChildren: 0.1 } 
+    },
   };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.5, ease: "easeOut" }
+    },
   };
 
   return (
@@ -79,20 +86,20 @@ export default function DashboardPage() {
             </div>
         </motion.div>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <motion.div variants={containerVariants} className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <motion.div variants={itemVariants}><StatCard title="Net Worth" value={netWorth} icon={Wallet} description="Total value of your assets" loading={isLoading} error={portfolioError} /></motion.div>
         <motion.div variants={itemVariants}><StatCard title="Monthly Income" value={income} icon={TrendingUp} description="Earnings this month" loading={isLoading} error={transactionsError} /></motion.div>
         <motion.div variants={itemVariants}><StatCard title="Monthly Expenses" value={expenses} icon={TrendingDown} description="Spendings this month" loading={isLoading} error={transactionsError} /></motion.div>
         <motion.div variants={itemVariants}><StatCard title="Profit / Loss" value={profitLoss} icon={Scale} description="Income minus expenses" loading={isLoading} error={transactionsError} /></motion.div>
-      </div>
+      </motion.div>
 
-      <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <div className="lg:col-span-4">
+      <motion.div variants={containerVariants} className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <motion.div variants={itemVariants} className="lg:col-span-4">
             <PerformanceChart transactions={transactions} error={transactionsError} />
-        </div>
-        <div className="lg:col-span-3">
+        </motion.div>
+        <motion.div variants={itemVariants} className="lg:col-span-3">
             <PortfolioChart assets={portfolio} error={portfolioError} />
-        </div>
+        </motion.div>
       </motion.div>
       
       <motion.div variants={itemVariants}>
