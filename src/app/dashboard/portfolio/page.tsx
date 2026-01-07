@@ -121,9 +121,9 @@ export default function PortfolioPage() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!itemToDelete) return;
+    if (!itemToDelete || !user) return;
     setIsDeleting(true);
-    const result = await deleteAsset(itemToDelete);
+    const result = await deleteAsset(user.uid, itemToDelete);
     setIsDeleting(false);
 
     if (result.error) {

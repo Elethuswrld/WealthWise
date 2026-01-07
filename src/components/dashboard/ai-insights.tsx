@@ -15,17 +15,27 @@ import {
     AlertDialogTitle,
   } from "@/components/ui/alert-dialog"
 import type { FinancialSnapshot } from '@/lib/finance';
+import { useUser } from '@/firebase';
   
 
 export function AiInsights({ data }: { data: FinancialSnapshot }) {
+  const { user } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [insights, setInsights] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const handleGenerateInsights = async () => {
+    if (!user) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'You must be logged in to get insights.',
+        });
+        return;
+    }
     setIsLoading(true);
-    const result = await getAIFinancialInsights(data);
+    const result = await getAIFinancialInsights(user.uid, data);
     setIsLoading(false);
 
     if (result.error) {

@@ -124,9 +124,9 @@ export default function TransactionsPage() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!itemToDelete) return;
+    if (!itemToDelete || !user) return;
     setIsDeleting(true);
-    const result = await deleteTransaction(itemToDelete);
+    const result = await deleteTransaction(user.uid, itemToDelete);
     setIsDeleting(false);
 
     if (result.error) {

@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import type { WithId, Transaction, Asset } from '@/lib/types';
+import { useUser } from '@/firebase';
 
 interface AddTransactionFormProps {
     onFinished: () => void;
@@ -33,6 +34,7 @@ interface AddTransactionFormProps {
 }
 
 function AddTransactionForm({ onFinished, initialData }: AddTransactionFormProps) {
+  const { user } = useUser();
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -40,12 +42,16 @@ function AddTransactionForm({ onFinished, initialData }: AddTransactionFormProps
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+        return;
+    }
     setIsLoading(true);
 
     const formData = new FormData(event.currentTarget);
     const result = isEditing 
-        ? await updateTransaction(initialData.id, formData)
-        : await addTransaction(formData);
+        ? await updateTransaction(user.uid, initialData.id, formData)
+        : await addTransaction(user.uid, formData);
 
     setIsLoading(false);
     if (result.error) {
@@ -100,6 +106,7 @@ interface AddAssetFormProps {
 }
 
 function AddAssetForm({ onFinished, initialData }: AddAssetFormProps) {
+    const { user } = useUser();
     const { toast } = useToast();
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
@@ -107,12 +114,16 @@ function AddAssetForm({ onFinished, initialData }: AddAssetFormProps) {
   
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
+      if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+        return;
+      }
       setIsLoading(true);
   
       const formData = new FormData(event.currentTarget);
       const result = isEditing
-        ? await updateAsset(initialData.id, formData)
-        : await addAsset(formData);
+        ? await updateAsset(user.uid, initialData.id, formData)
+        : await addAsset(user.uid, formData);
   
       setIsLoading(false);
       if (result.error) {

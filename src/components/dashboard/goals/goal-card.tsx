@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { deleteGoal } from '@/app/actions';
+import { useUser } from '@/firebase';
 
 interface GoalCardProps {
   goal: WithId<Goal>;
@@ -28,6 +29,7 @@ const formatCurrency = (amount: number, currency = 'USD') => {
 };
 
 export function GoalCard({ goal, onEdit }: GoalCardProps) {
+  const { user } = useUser();
   const { toast } = useToast();
   const router = useRouter();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -40,8 +42,9 @@ export function GoalCard({ goal, onEdit }: GoalCardProps) {
   };
 
   const handleDeleteConfirm = async () => {
+    if (!user) return;
     setIsDeleting(true);
-    const result = await deleteGoal(goal.id);
+    const result = await deleteGoal(user.uid, goal.id);
     setIsDeleting(false);
 
     if (result.error) {

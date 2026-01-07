@@ -23,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useUser } from '@/firebase';
 
 const goalSchema = z.object({
     name: z.string().min(3, 'Goal name must be at least 3 characters.'),
@@ -40,6 +41,7 @@ interface GoalDialogProps {
 }
 
 export function GoalDialog({ open, onOpenChange, goal }: GoalDialogProps) {
+  const { user } = useUser();
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +58,10 @@ export function GoalDialog({ open, onOpenChange, goal }: GoalDialogProps) {
   });
 
   const onSubmit = async (data: GoalFormValues) => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+        return;
+    }
     setIsLoading(true);
 
     const formData = new FormData();
@@ -67,8 +73,8 @@ export function GoalDialog({ open, onOpenChange, goal }: GoalDialogProps) {
     }
     
     const result = isEditing
-      ? await updateGoal(goal.id, formData)
-      : await addGoal(formData);
+      ? await updateGoal(user.uid, goal.id, formData)
+      : await addGoal(user.uid, formData);
 
     setIsLoading(false);
     if (result.error) {

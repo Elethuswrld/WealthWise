@@ -14,12 +14,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useUser } from '@/firebase';
+import { useUser, useAuth } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { updateUserProfile } from '@/app/actions';
+import { updateProfile } from 'firebase/auth';
+import { useFirestore, doc, getDoc } from 'firebase/firestore';
 
 const profileSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -37,12 +39,14 @@ const currencies = [
     { code: 'AUD', name: 'Australian Dollar' },
     { code: 'CAD', name: 'Canadian Dollar' },
     { code: 'CHF', name: 'Swiss Franc' },
-    { code: 'CNY', name: 'Chinese Yuan' },
+    { code: 'CNY', name 'Chinese Yuan' },
     { code: 'ZAR', name: 'South African Rand' },
 ];
 
 export default function SettingsPage() {
   const { user } = useUser();
+  const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -52,29 +56,66 @@ export default function SettingsPage() {
     defaultValues: {
       name: user?.displayName || '',
       email: user?.email || '',
-      currency: 'USD', // This will be updated once we fetch user data
+      currency: 'USD',
     },
   });
 
-  // Effect to populate form with user's currency once available
-  // In a real app, you'd fetch this from your Firestore user document
-  // For now, we'll just keep it simple.
+  useEffect(() => {
+    if (user && firestore) {
+      const fetchUserData = async () => {
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          form.reset({
+            name: user.displayName || userData.name || '',
+            email: user.email || '',
+            currency: userData.currency || 'USD',
+          });
+        }
+      };
+      fetchUserData();
+    } else if (user) {
+        form.reset({
+            name: user.displayName || '',
+            email: user.email || '',
+            currency: 'USD',
+        });
+    }
+  }, [user, firestore, form]);
+
 
   const onSubmit = async (data: ProfileFormValues) => {
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to update your profile.' });
+      return;
+    }
     setIsLoading(true);
 
     const formData = new FormData();
     formData.append('name', data.name);
     formData.append('currency', data.currency);
 
-    const result = await updateUserProfile(formData);
+    try {
+        // Update auth profile on the client
+        if (auth.currentUser) {
+            await updateProfile(auth.currentUser, { displayName: data.name });
+        }
+        
+        // Call server action to update firestore
+        const result = await updateUserProfile(user.uid, formData);
 
-    setIsLoading(false);
-    if (result.error) {
-      toast({ variant: 'destructive', title: 'Error', description: result.error });
-    } else {
-      toast({ title: 'Success', description: 'Your profile has been updated.' });
-      router.refresh();
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        toast({ title: 'Success', description: 'Your profile has been updated.' });
+        router.refresh();
+
+    } catch(error: any) {
+        toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -121,7 +162,7 @@ export default function SettingsPage() {
                     control={form.control}
                     name="currency"
                     render={({ field }) => (
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
                             <SelectTrigger id="currency">
                                 <SelectValue placeholder="Select a currency" />
                             </SelectTrigger>

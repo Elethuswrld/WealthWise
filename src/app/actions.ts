@@ -7,7 +7,7 @@ import {
 } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 import type { Asset, Goal, Transaction } from '@/lib/types';
-import { generatePersonalizedInsights } from '@/ai/flows/generate-personalized-financial-insights';
+import { generatePersonalizedInsights } from '@/ai/flows/generate-personalized-financial-insights.ts';
 import { dummyAssets, dummyTransactions } from '@/lib/dummy-data';
 import type { FinancialSnapshot } from '@/lib/finance';
 import { v4 as uuidv4 } from 'uuid';
@@ -54,8 +54,7 @@ export async function createNewUserDocument(user: FirebaseUser) {
     }
 }
 
-export async function updateUserProfile(formData: FormData) {
-    const userId = auth.currentUser?.uid;
+export async function updateUserProfile(userId: string, formData: FormData) {
     if (!userId) return { error: 'User not authenticated' };
 
     try {
@@ -67,10 +66,8 @@ export async function updateUserProfile(formData: FormData) {
             return { error: 'Name must be at least 2 characters long.' };
         }
 
-        // Update Firebase Auth display name
-        if (auth.currentUser) {
-            await updateProfile(auth.currentUser, { displayName: name });
-        }
+        // We can't update Firebase Auth user from server action without admin sdk, 
+        // which is not set up. Client will handle this.
 
         // Update Firestore user document
         const userRef = doc(db, 'users', userId);
@@ -89,8 +86,7 @@ export async function updateUserProfile(formData: FormData) {
 
 // --- Data Actions ---
 
-export async function addTransaction(formData: FormData) {
-    const userId = auth.currentUser?.uid;
+export async function addTransaction(userId: string, formData: FormData) {
     if (!userId) return { error: 'User not authenticated' };
 
     try {
@@ -114,8 +110,7 @@ export async function addTransaction(formData: FormData) {
     }
 }
 
-export async function updateTransaction(transactionId: string, formData: FormData) {
-    const userId = auth.currentUser?.uid;
+export async function updateTransaction(userId: string, transactionId: string, formData: FormData) {
     if (!userId) return { error: 'User not authenticated' };
   
     try {
@@ -135,8 +130,7 @@ export async function updateTransaction(transactionId: string, formData: FormDat
     }
   }
   
-  export async function deleteTransaction(transactionId: string) {
-    const userId = auth.currentUser?.uid;
+  export async function deleteTransaction(userId: string, transactionId: string) {
     if (!userId) return { error: 'User not authenticated' };
   
     try {
@@ -150,8 +144,7 @@ export async function updateTransaction(transactionId: string, formData: FormDat
   }
 
 
-export async function addAsset(formData: FormData) {
-    const userId = auth.currentUser?.uid;
+export async function addAsset(userId: string, formData: FormData) {
     if (!userId) return { error: 'User not authenticated' };
 
     try {
@@ -174,8 +167,7 @@ export async function addAsset(formData: FormData) {
     }
 }
 
-export async function updateAsset(assetId: string, formData: FormData) {
-    const userId = auth.currentUser?.uid;
+export async function updateAsset(userId: string, assetId: string, formData: FormData) {
     if (!userId) return { error: 'User not authenticated' };
 
     try {
@@ -195,8 +187,7 @@ export async function updateAsset(assetId: string, formData: FormData) {
     }
 }
 
-export async function deleteAsset(assetId: string) {
-    const userId = auth.currentUser?.uid;
+export async function deleteAsset(userId: string, assetId: string) {
     if (!userId) return { error: 'User not authenticated' };
 
     try {
@@ -212,8 +203,7 @@ export async function deleteAsset(assetId: string) {
 
 // --- Goal Actions ---
 
-export async function addGoal(formData: FormData) {
-    const userId = auth.currentUser?.uid;
+export async function addGoal(userId: string, formData: FormData) {
     if (!userId) return { error: 'User not authenticated' };
 
     try {
@@ -239,8 +229,7 @@ export async function addGoal(formData: FormData) {
     }
 }
 
-export async function updateGoal(goalId: string, formData: FormData) {
-    const userId = auth.currentUser?.uid;
+export async function updateGoal(userId: string, goalId: string, formData: FormData) {
     if (!userId) return { error: 'User not authenticated' };
 
     try {
@@ -261,8 +250,7 @@ export async function updateGoal(goalId: string, formData: FormData) {
     }
 }
 
-export async function deleteGoal(goalId: string) {
-    const userId = auth.currentUser?.uid;
+export async function deleteGoal(userId: string, goalId: string) {
     if (!userId) return { error: 'User not authenticated' };
 
     try {
@@ -276,8 +264,8 @@ export async function deleteGoal(goalId: string) {
 
 
 // --- GenAI Action ---
-export async function getAIFinancialInsights(input: FinancialSnapshot) {
-    if (!auth.currentUser?.uid) {
+export async function getAIFinancialInsights(userId: string, input: FinancialSnapshot) {
+    if (!userId) {
         return { error: 'You must be logged in to get insights.' };
     }
     try {
