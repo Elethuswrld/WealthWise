@@ -60,11 +60,9 @@ export default function DashboardLayout({
                   <SheetContent side="left" className="p-0 w-64">
                     <SheetHeader className="p-4 border-b">
                        <Logo />
+                       <SheetTitle className="sr-only">Main Menu</SheetTitle>
+                       <SheetDescription className="sr-only">Navigation links for the application dashboard.</SheetDescription>
                     </SheetHeader>
-                    <SheetTitle className="sr-only">Main Menu</SheetTitle>
-                    <SheetDescription className="sr-only">
-                        Navigation links for the application dashboard.
-                    </SheetDescription>
                     <nav className="p-4">
                       <ul className="space-y-2">
                         {navItems.map(item => (
