@@ -39,7 +39,7 @@ const currencies = [
     { code: 'AUD', name: 'Australian Dollar' },
     { code: 'CAD', name: 'Canadian Dollar' },
     { code: 'CHF', name: 'Swiss Franc' },
-    { code: 'CNY', name 'Chinese Yuan' },
+    { code: 'CNY', name: 'Chinese Yuan' },
     { code: 'ZAR', name: 'South African Rand' },
 ];
 
