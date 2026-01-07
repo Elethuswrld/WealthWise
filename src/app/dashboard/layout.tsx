@@ -9,7 +9,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Logo } from '@/components/logo';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, Home, Wallet, Repeat, Settings } from 'lucide-react';
+import { Menu, Home, Wallet, Repeat, Settings, BarChartBig } from 'lucide-react';
 import Link from 'next/link';
 
 
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/dashboard/transactions', label: 'Transactions', icon: Repeat },
   { href: '/dashboard/portfolio', label: 'Portfolio', icon: Wallet },
+  { href: '/dashboard/reports', label: 'Reports', icon: BarChartBig },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 

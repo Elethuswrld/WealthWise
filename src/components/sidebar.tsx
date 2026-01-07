@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Wallet, Repeat, Settings } from 'lucide-react';
+import { Home, Wallet, Repeat, Settings, BarChartBig } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/dashboard/transactions', label: 'Transactions', icon: Repeat },
   { href: '/dashboard/portfolio', label: 'Portfolio', icon: Wallet },
+  { href: '/dashboard/reports', label: 'Reports', icon: BarChartBig },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -26,7 +27,7 @@ export function Sidebar() {
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard');
             return (
               <li key={item.href}>
                 <Link
