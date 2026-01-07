@@ -18,7 +18,7 @@ import { AddDataDialog } from '@/components/dashboard/add-data-dialog';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/empty-state';
-import { Repeat, MoreHorizontal, Trash2, Pencil, ArrowUpDown } from 'lucide-react';
+import { Repeat, MoreHorizontal, Trash2, Pencil, ArrowUpDown, AlertCircle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useState, useMemo } from 'react';
@@ -73,7 +73,7 @@ export default function TransactionsPage() {
     return query(collection(firestore, `users/${user.uid}/transactions`), orderBy('date', 'desc'));
   }, [firestore, user]);
 
-  const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
+  const { data: transactions, isLoading, error } = useCollection<Transaction>(transactionsQuery);
   
   const filteredTransactions = useMemo(() => {
     if (!transactions) return [];
@@ -144,6 +144,114 @@ export default function TransactionsPage() {
     return sortDirection === 'desc' ? '▼' : '▲';
   };
 
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center space-x-4 p-4 rounded-md">
+                    <Skeleton className="h-5 w-1/4" />
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                    <Skeleton className="h-5 w-2/4" />
+                    <Skeleton className="h-5 w-1/4" />
+                </div>
+            ))}
+        </div>
+      );
+    }
+    
+    if (error) {
+        return (
+            <EmptyState
+                title="Error loading transactions"
+                description="We couldn't fetch your data. Please try again later."
+                icon={AlertCircle}
+            />
+        );
+    }
+
+    if (sortedTransactions && sortedTransactions.length > 0) {
+      return (
+        <Table>
+            <TableHeader>
+            <TableRow>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('category')}>
+                        <span className="hidden sm:inline">Category</span>
+                        <span className="sm:hidden">Cat.</span>
+                        {renderSortIcon('category')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('type')}>
+                        Type {renderSortIcon('type')}
+                    </Button>
+                </TableHead>
+                <TableHead className="hidden md:table-cell">Notes</TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('date')}>
+                        Date {renderSortIcon('date')}
+                    </Button>
+                </TableHead>
+                <TableHead className="text-right">
+                    <Button variant="ghost" onClick={() => handleSort('amount')}>
+                        Amount {renderSortIcon('amount')}
+                    </Button>
+                </TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+            </TableHeader>
+            <TableBody>
+                {sortedTransactions.map((tx) => (
+                <TableRow key={tx.id}>
+                    <TableCell className="font-medium">{tx.category}</TableCell>
+                    <TableCell>
+                    <Badge variant={getBadgeVariant(tx.type)} className="capitalize">{tx.type}</Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">{tx.notes || '-'}</TableCell>
+                    <TableCell>
+                    {tx.date ? format(new Date(tx.date.seconds * 1000), 'MMM d, yy') : 'N/A'}
+                    </TableCell>
+                    <TableCell className={cn(
+                    "text-right font-mono",
+                    tx.type === 'income' ? 'text-primary' : 'text-destructive'
+                    )}>
+                    {tx.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(tx.amount))}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onSelect={() => handleEdit(tx)}>
+                            <Pencil className="mr-2 h-4 w-4" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleDeleteInitiate(tx.id)} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+      );
+    }
+    
+    return (
+        <EmptyState 
+            title="No transactions found"
+            description={filter === 'all' ? "Add your first transaction to see your history here." : `You have no transactions of type '${filter}'.`}
+            icon={Repeat}
+        />
+    );
+  }
+
 
   return (
     <div className="space-y-8">
@@ -174,93 +282,7 @@ export default function TransactionsPage() {
                     <TabsTrigger value="investment">Investments</TabsTrigger>
                 </TabsList>
             </Tabs>
-          {isLoading ? (
-            <div className="space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="flex items-center space-x-4 p-4 rounded-md">
-                        <Skeleton className="h-5 w-1/4" />
-                        <Skeleton className="h-6 w-24 rounded-full" />
-                        <Skeleton className="h-5 w-2/4" />
-                        <Skeleton className="h-5 w-1/4" />
-                    </div>
-                ))}
-            </div>
-          ) : sortedTransactions && sortedTransactions.length > 0 ? (
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead>
-                        <Button variant="ghost" onClick={() => handleSort('category')}>
-                            <span className="hidden sm:inline">Category</span>
-                            <span className="sm:hidden">Cat.</span>
-                            {renderSortIcon('category')}
-                        </Button>
-                    </TableHead>
-                    <TableHead>
-                        <Button variant="ghost" onClick={() => handleSort('type')}>
-                            Type {renderSortIcon('type')}
-                        </Button>
-                    </TableHead>
-                    <TableHead className="hidden md:table-cell">Notes</TableHead>
-                    <TableHead>
-                        <Button variant="ghost" onClick={() => handleSort('date')}>
-                            Date {renderSortIcon('date')}
-                        </Button>
-                    </TableHead>
-                    <TableHead className="text-right">
-                        <Button variant="ghost" onClick={() => handleSort('amount')}>
-                            Amount {renderSortIcon('amount')}
-                        </Button>
-                    </TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {sortedTransactions.map((tx) => (
-                    <TableRow key={tx.id}>
-                        <TableCell className="font-medium">{tx.category}</TableCell>
-                        <TableCell>
-                        <Badge variant={getBadgeVariant(tx.type)} className="capitalize">{tx.type}</Badge>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-muted-foreground">{tx.notes || '-'}</TableCell>
-                        <TableCell>
-                        {tx.date ? format(new Date(tx.date.seconds * 1000), 'MMM d, yy') : 'N/A'}
-                        </TableCell>
-                        <TableCell className={cn(
-                        "text-right font-mono",
-                        tx.type === 'income' ? 'text-primary' : 'text-destructive'
-                        )}>
-                        {tx.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(tx.amount))}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Actions</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={() => handleEdit(tx)}>
-                                <Pencil className="mr-2 h-4 w-4" /> Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => handleDeleteInitiate(tx.id)} className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                    </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-          ) : (
-            <EmptyState 
-                title="No transactions found"
-                description={filter === 'all' ? "Add your first transaction to see your history here." : `You have no transactions of type '${filter}'.`}
-                icon={Repeat}
-            />
-          )}
+            {renderContent()}
         </CardContent>
       </Card>
       <AddDataDialog 

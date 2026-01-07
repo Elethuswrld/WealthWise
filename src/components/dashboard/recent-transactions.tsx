@@ -16,9 +16,10 @@ import { Skeleton } from '../ui/skeleton';
 interface RecentTransactionsProps {
   transactions: Transaction[];
   loading?: boolean;
+  error?: Error | null;
 }
 
-export function RecentTransactions({ transactions, loading }: RecentTransactionsProps) {
+export function RecentTransactions({ transactions, loading, error }: RecentTransactionsProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -64,6 +65,12 @@ export function RecentTransactions({ transactions, loading }: RecentTransactions
                         <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     </TableRow>
                 ))
+            ) : error ? (
+                <TableRow>
+                    <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
+                        Could not load recent transactions.
+                    </TableCell>
+                </TableRow>
             ) : transactions.length > 0 ? (
               transactions.map((tx) => (
                 <TableRow key={tx.id} className="transition-colors duration-200 hover:bg-muted/50 cursor-pointer">

@@ -7,12 +7,13 @@ import { useTheme } from 'next-themes';
 import { useMemo } from 'react';
 import { calculateMonthlyPerformance } from '@/lib/finance';
 import EmptyState from '../empty-state';
-import { LineChart as LineChartIcon } from 'lucide-react';
+import { LineChart as LineChartIcon, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 
 interface PerformanceChartProps {
   transactions: Transaction[] | null;
+  error?: Error | null;
 }
 
 const resolveChartTheme = (theme: string | undefined) => {
@@ -25,35 +26,32 @@ const resolveChartTheme = (theme: string | undefined) => {
     };
   };
 
-export function PerformanceChart({ transactions }: PerformanceChartProps) {
+export function PerformanceChart({ transactions, error }: PerformanceChartProps) {
   const { theme } = useTheme();
   const chartTheme = resolveChartTheme(theme);
 
   const data = useMemo(() => calculateMonthlyPerformance(transactions || []), [transactions]);
   
-  if (!transactions || transactions.length === 0) {
+  const renderContent = () => {
+    if (error) {
+        return (
+            <EmptyState
+                title="Could not load chart"
+                description="There was an error fetching the performance data."
+                icon={AlertCircle}
+            />
+        );
+    }
+    if (!transactions || transactions.length === 0) {
+      return (
+          <EmptyState 
+              title="Not enough data"
+              description="Your monthly performance will appear here after you log some transactions."
+              icon={LineChartIcon}
+          />
+      );
+    }
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Monthly Performance</CardTitle>
-            </CardHeader>
-            <CardContent className="h-[300px] flex items-center justify-center">
-                <EmptyState 
-                    title="Not enough data"
-                    description="Your monthly performance will appear here after you log some transactions."
-                    icon={LineChartIcon}
-                />
-            </CardContent>
-        </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Monthly Performance</CardTitle>
-      </CardHeader>
-      <CardContent>
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -80,6 +78,16 @@ export function PerformanceChart({ transactions }: PerformanceChartProps) {
             </LineChart>
           </ResponsiveContainer>
         </motion.div>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Monthly Performance</CardTitle>
+      </CardHeader>
+      <CardContent className="h-[300px] flex items-center justify-center">
+        {renderContent()}
       </CardContent>
     </Card>
   );

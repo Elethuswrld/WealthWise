@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { AddDataDialog } from '@/components/dashboard/add-data-dialog';
-import { ArrowUpRight, ArrowDownRight, Minus, Wallet, MoreHorizontal, Trash2, Pencil, ArrowUpDown } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus, Wallet, MoreHorizontal, Trash2, Pencil, ArrowUpDown, AlertCircle } from 'lucide-react';
 import { collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/empty-state';
@@ -66,7 +66,7 @@ export default function PortfolioPage() {
     return collection(firestore, `users/${user.uid}/portfolio`);
   }, [firestore, user]);
 
-  const { data: portfolio, isLoading } = useCollection<Asset>(portfolioQuery);
+  const { data: portfolio, isLoading, error } = useCollection<Asset>(portfolioQuery);
 
   const sortedPortfolio = useMemo(() => {
     if (!portfolio) return [];
@@ -137,6 +137,130 @@ export default function PortfolioPage() {
   };
 
   const totalValue = portfolio ? portfolio.reduce((sum, asset) => sum + asset.currentValue, 0) : 0;
+  
+  const renderContent = () => {
+    if (isLoading) {
+        return (
+            <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center space-x-4 p-4 rounded-md">
+                        <Skeleton className="h-5 w-1/4" />
+                        <Skeleton className="h-6 w-24 rounded-full" />
+                        <Skeleton className="h-5 w-1/4 ml-auto" />
+                        <Skeleton className="h-5 w-1/4 ml-auto" />
+                    </div>
+                ))}
+            </div>
+        );
+    }
+    
+    if (error) {
+        return (
+            <EmptyState
+                title="Error loading portfolio"
+                description="We couldn't fetch your data. Please try again later."
+                icon={AlertCircle}
+            />
+        );
+    }
+    
+    if (sortedPortfolio && sortedPortfolio.length > 0) {
+        return (
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('assetName')}>
+                            <span className="hidden sm:inline">Asset </span>Name
+                            {renderSortIcon('assetName')}
+                        </Button>
+                    </TableHead>
+                    <TableHead>
+                         <Button variant="ghost" onClick={() => handleSort('assetType')}>Type {renderSortIcon('assetType')}</Button>
+                    </TableHead>
+                    <TableHead className="text-right">
+                         <Button variant="ghost" onClick={() => handleSort('currentValue')}>
+                            <span className="hidden sm:inline">Current </span>Value
+                            {renderSortIcon('currentValue')}
+                         </Button>
+                    </TableHead>
+                    <TableHead className="text-right hidden md:table-cell">
+                        <Button variant="ghost" onClick={() => handleSort('gainLoss')}>Gain/Loss {renderSortIcon('gainLoss')}</Button>
+                    </TableHead>
+                    <TableHead className="text-right">
+                        <Button variant="ghost" onClick={() => handleSort('gainLossPercent')}>
+                            G/L %
+                            {renderSortIcon('gainLossPercent')}
+                        </Button>
+                    </TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {sortedPortfolio.map((asset) => {
+                    const gainLoss = asset.currentValue - asset.investedAmount;
+                    const gainLossPercent = asset.investedAmount === 0 ? 0 : gainLoss / asset.investedAmount;
+                    const isGain = gainLoss > 0;
+                    const isLoss = gainLoss < 0;
+
+                    return (
+                        <TableRow key={asset.id}>
+                        <TableCell className="font-medium">{asset.assetName}</TableCell>
+                        <TableCell>
+                            <Badge variant="secondary" className="capitalize">{asset.assetType}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono">{formatCurrency(asset.currentValue)}</TableCell>
+                        <TableCell className={cn(
+                            "text-right font-mono hidden md:flex items-center justify-end gap-1",
+                            isGain && "text-primary",
+                            isLoss && "text-destructive"
+                        )}>
+                            {isGain && <ArrowUpRight className="h-4 w-4" />}
+                            {isLoss && <ArrowDownRight className="h-4 w-4" />}
+                            {!isGain && !isLoss && <Minus className="h-4 w-4" />}
+                            {formatCurrency(gainLoss)}
+                        </TableCell>
+                        <TableCell className={cn(
+                            "text-right font-mono",
+                            isGain && "text-primary",
+                            isLoss && "text-destructive"
+                        )}>
+                            {formatPercent(gainLossPercent)}
+                        </TableCell>
+                         <TableCell className="text-right">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Actions</span>
+                                </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => handleEdit(asset)}>
+                                    <Pencil className="mr-2 h-4 w-4" /> Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => handleDeleteInitiate(asset.id)} className="text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </TableCell>
+                        </TableRow>
+                    );
+                    })}
+                </TableBody>
+            </Table>
+        );
+    }
+
+    return (
+        <EmptyState
+            title="No assets in your portfolio"
+            description="Add an asset to see your allocation here."
+            icon={Wallet}
+        />
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -160,109 +284,7 @@ export default function PortfolioPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-            {isLoading ? (
-                <div className="space-y-2">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="flex items-center space-x-4 p-4 rounded-md">
-                            <Skeleton className="h-5 w-1/4" />
-                            <Skeleton className="h-6 w-24 rounded-full" />
-                            <Skeleton className="h-5 w-1/4 ml-auto" />
-                            <Skeleton className="h-5 w-1/4 ml-auto" />
-                        </div>
-                    ))}
-                </div>
-            ) : sortedPortfolio && sortedPortfolio.length > 0 ? (
-                <Table>
-                    <TableHeader>
-                    <TableRow>
-                        <TableHead>
-                            <Button variant="ghost" onClick={() => handleSort('assetName')}>
-                                <span className="hidden sm:inline">Asset </span>Name
-                                {renderSortIcon('assetName')}
-                            </Button>
-                        </TableHead>
-                        <TableHead>
-                             <Button variant="ghost" onClick={() => handleSort('assetType')}>Type {renderSortIcon('assetType')}</Button>
-                        </TableHead>
-                        <TableHead className="text-right">
-                             <Button variant="ghost" onClick={() => handleSort('currentValue')}>
-                                <span className="hidden sm:inline">Current </span>Value
-                                {renderSortIcon('currentValue')}
-                             </Button>
-                        </TableHead>
-                        <TableHead className="text-right hidden md:table-cell">
-                            <Button variant="ghost" onClick={() => handleSort('gainLoss')}>Gain/Loss {renderSortIcon('gainLoss')}</Button>
-                        </TableHead>
-                        <TableHead className="text-right">
-                            <Button variant="ghost" onClick={() => handleSort('gainLossPercent')}>
-                                G/L %
-                                {renderSortIcon('gainLossPercent')}
-                            </Button>
-                        </TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {sortedPortfolio.map((asset) => {
-                        const gainLoss = asset.currentValue - asset.investedAmount;
-                        const gainLossPercent = asset.investedAmount === 0 ? 0 : gainLoss / asset.investedAmount;
-                        const isGain = gainLoss > 0;
-                        const isLoss = gainLoss < 0;
-
-                        return (
-                            <TableRow key={asset.id}>
-                            <TableCell className="font-medium">{asset.assetName}</TableCell>
-                            <TableCell>
-                                <Badge variant="secondary" className="capitalize">{asset.assetType}</Badge>
-                            </TableCell>
-                            <TableCell className="text-right font-mono">{formatCurrency(asset.currentValue)}</TableCell>
-                            <TableCell className={cn(
-                                "text-right font-mono hidden md:flex items-center justify-end gap-1",
-                                isGain && "text-primary",
-                                isLoss && "text-destructive"
-                            )}>
-                                {isGain && <ArrowUpRight className="h-4 w-4" />}
-                                {isLoss && <ArrowDownRight className="h-4 w-4" />}
-                                {!isGain && !isLoss && <Minus className="h-4 w-4" />}
-                                {formatCurrency(gainLoss)}
-                            </TableCell>
-                            <TableCell className={cn(
-                                "text-right font-mono",
-                                isGain && "text-primary",
-                                isLoss && "text-destructive"
-                            )}>
-                                {formatPercent(gainLossPercent)}
-                            </TableCell>
-                             <TableCell className="text-right">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                        <span className="sr-only">Actions</span>
-                                    </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onSelect={() => handleEdit(asset)}>
-                                        <Pencil className="mr-2 h-4 w-4" /> Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => handleDeleteInitiate(asset.id)} className="text-destructive">
-                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                    </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </TableCell>
-                            </TableRow>
-                        );
-                        })}
-                    </TableBody>
-                </Table>
-            ) : (
-                <EmptyState
-                    title="No assets in your portfolio"
-                    description="Add an asset to see your allocation here."
-                    icon={Wallet}
-                />
-            )}
+            {renderContent()}
         </CardContent>
       </Card>
       <AddDataDialog 

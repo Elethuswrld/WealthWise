@@ -13,6 +13,7 @@ interface StatCardProps {
   description?: string;
   currency?: string;
   loading?: boolean;
+  error?: Error | null;
 }
 
 const formatCurrency = (value: number, currency = 'USD') => {
@@ -54,7 +55,7 @@ function AnimatedNumber({ value, currency }: { value: number; currency?: string 
 }
 
 
-export function StatCard({ title, value, icon: Icon, description, currency = 'USD', loading }: StatCardProps) {
+export function StatCard({ title, value, icon: Icon, description, currency = 'USD', loading, error }: StatCardProps) {
   
   return (
     <motion.div
@@ -72,6 +73,11 @@ export function StatCard({ title, value, icon: Icon, description, currency = 'US
                   <Skeleton className='h-8 w-3/4' />
                   <Skeleton className='h-4 w-1/2' />
               </div>
+          ) : error ? (
+            <div className='space-y-2'>
+                <div className="text-2xl font-bold text-destructive">-</div>
+                <p className="text-xs text-destructive">Could not load data</p>
+            </div>
           ) : (
               <>
                   <div className="text-2xl font-bold">

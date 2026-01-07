@@ -37,11 +37,12 @@ export default function DashboardPage() {
     );
   }, [firestore, user]);
 
-  const { data: portfolio, isLoading: portfolioLoading } = useCollection<Asset>(portfolioQuery);
-  const { data: transactions, isLoading: transactionsLoading } = useCollection<Transaction>(transactionsQuery);
-  const { data: recentTransactions, isLoading: recentTransactionsLoading } = useCollection<Transaction>(recentTransactionsQuery);
+  const { data: portfolio, isLoading: portfolioLoading, error: portfolioError } = useCollection<Asset>(portfolioQuery);
+  const { data: transactions, isLoading: transactionsLoading, error: transactionsError } = useCollection<Transaction>(transactionsQuery);
+  const { data: recentTransactions, isLoading: recentTransactionsLoading, error: recentTransactionsError } = useCollection<Transaction>(recentTransactionsQuery);
   
   const isLoading = portfolioLoading || transactionsLoading;
+  const isError = portfolioError || transactionsError;
 
   const netWorth = portfolio ? calculateNetWorth(portfolio) : 0;
   const { income, expenses, profitLoss } = transactions ? calculateCurrentMonthSummary(transactions) : { income: 0, expenses: 0, profitLoss: 0 };
@@ -80,23 +81,23 @@ export default function DashboardPage() {
         </motion.div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <motion.div variants={itemVariants}><StatCard title="Net Worth" value={netWorth} icon={Wallet} description="Total value of your assets" loading={isLoading} /></motion.div>
-        <motion.div variants={itemVariants}><StatCard title="Monthly Income" value={income} icon={TrendingUp} description="Earnings this month" loading={isLoading} /></motion.div>
-        <motion.div variants={itemVariants}><StatCard title="Monthly Expenses" value={expenses} icon={TrendingDown} description="Spendings this month" loading={isLoading} /></motion.div>
-        <motion.div variants={itemVariants}><StatCard title="Profit / Loss" value={profitLoss} icon={Scale} description="Income minus expenses" loading={isLoading} /></motion.div>
+        <motion.div variants={itemVariants}><StatCard title="Net Worth" value={netWorth} icon={Wallet} description="Total value of your assets" loading={isLoading} error={portfolioError} /></motion.div>
+        <motion.div variants={itemVariants}><StatCard title="Monthly Income" value={income} icon={TrendingUp} description="Earnings this month" loading={isLoading} error={transactionsError} /></motion.div>
+        <motion.div variants={itemVariants}><StatCard title="Monthly Expenses" value={expenses} icon={TrendingDown} description="Spendings this month" loading={isLoading} error={transactionsError} /></motion.div>
+        <motion.div variants={itemVariants}><StatCard title="Profit / Loss" value={profitLoss} icon={Scale} description="Income minus expenses" loading={isLoading} error={transactionsError} /></motion.div>
       </div>
 
       <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <div className="lg:col-span-4">
-            <PerformanceChart transactions={transactions} />
+            <PerformanceChart transactions={transactions} error={transactionsError} />
         </div>
         <div className="lg:col-span-3">
-            <PortfolioChart assets={portfolio} />
+            <PortfolioChart assets={portfolio} error={portfolioError} />
         </div>
       </motion.div>
       
       <motion.div variants={itemVariants}>
-        <RecentTransactions transactions={recentTransactions || []} loading={recentTransactionsLoading} />
+        <RecentTransactions transactions={recentTransactions || []} loading={recentTransactionsLoading} error={recentTransactionsError} />
       </motion.div>
 
     </motion.div>
