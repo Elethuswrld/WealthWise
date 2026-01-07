@@ -78,6 +78,19 @@ service cloud.firestore {
     }
 
     /**
+     * Validates a User document on update.
+     * Ensures critical fields ('id', 'email', 'createdAt') cannot be changed.
+     * Allows 'name' and 'currency' to be updated.
+     */
+    function isValidUpdateUser(userId) {
+      let incomingData = request.resource.data;
+      return isOwner(userId)
+            && incomingData.id == resource.data.id
+            && incomingData.email == resource.data.email
+            && incomingData.createdAt == resource.data.createdAt;
+    }
+
+    /**
      * Validates a new Transaction document on creation.
      * Enforces that the transaction's internal 'userId' and 'id' fields match the
      * document's path, creating an unbreakable link to the owner and its own identity.
@@ -165,7 +178,7 @@ service cloud.firestore {
       allow get: if isOwner(userId);
       allow list: if false;
       allow create: if isValidNewUser(userId);
-      allow update: if isOwner(userId);
+      allow update: if isValidUpdateUser(userId);
       allow delete: if isExistingOwner(userId);
 
       /**
