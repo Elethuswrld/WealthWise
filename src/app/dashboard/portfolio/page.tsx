@@ -176,19 +176,28 @@ export default function PortfolioPage() {
                     <TableHeader>
                     <TableRow>
                         <TableHead>
-                            <Button variant="ghost" onClick={() => handleSort('assetName')}>Asset Name {renderSortIcon('assetName')}</Button>
+                            <Button variant="ghost" onClick={() => handleSort('assetName')}>
+                                <span className="hidden sm:inline">Asset </span>Name
+                                {renderSortIcon('assetName')}
+                            </Button>
                         </TableHead>
                         <TableHead>
                              <Button variant="ghost" onClick={() => handleSort('assetType')}>Type {renderSortIcon('assetType')}</Button>
                         </TableHead>
                         <TableHead className="text-right">
-                             <Button variant="ghost" onClick={() => handleSort('currentValue')}>Current Value {renderSortIcon('currentValue')}</Button>
+                             <Button variant="ghost" onClick={() => handleSort('currentValue')}>
+                                <span className="hidden sm:inline">Current </span>Value
+                                {renderSortIcon('currentValue')}
+                             </Button>
+                        </TableHead>
+                        <TableHead className="text-right hidden md:table-cell">
+                            <Button variant="ghost" onClick={() => handleSort('gainLoss')}>Gain/Loss {renderSortIcon('gainLoss')}</Button>
                         </TableHead>
                         <TableHead className="text-right">
-                            <Button variant="ghost" onClick={() => handleSort('gainLoss')}>Gain / Loss {renderSortIcon('gainLoss')}</Button>
-                        </TableHead>
-                        <TableHead className="text-right">
-                            <Button variant="ghost" onClick={() => handleSort('gainLossPercent')}>Gain / Loss (%) {renderSortIcon('gainLossPercent')}</Button>
+                            <Button variant="ghost" onClick={() => handleSort('gainLossPercent')}>
+                                G/L %
+                                {renderSortIcon('gainLossPercent')}
+                            </Button>
                         </TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -208,7 +217,7 @@ export default function PortfolioPage() {
                             </TableCell>
                             <TableCell className="text-right font-mono">{formatCurrency(asset.currentValue)}</TableCell>
                             <TableCell className={cn(
-                                "text-right font-mono flex items-center justify-end gap-1",
+                                "text-right font-mono hidden md:flex items-center justify-end gap-1",
                                 isGain && "text-primary",
                                 isLoss && "text-destructive"
                             )}>

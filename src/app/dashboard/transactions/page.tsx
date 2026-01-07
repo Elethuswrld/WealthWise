@@ -167,7 +167,7 @@ export default function TransactionsPage() {
         </CardHeader>
         <CardContent>
             <Tabs value={filter} onValueChange={setFilter} className="mb-4">
-                <TabsList>
+                <TabsList className="w-full h-auto grid grid-cols-2 sm:w-auto sm:inline-flex sm:grid-cols-4">
                     <TabsTrigger value="all">All</TabsTrigger>
                     <TabsTrigger value="income">Income</TabsTrigger>
                     <TabsTrigger value="expense">Expenses</TabsTrigger>
@@ -191,7 +191,9 @@ export default function TransactionsPage() {
                 <TableRow>
                     <TableHead>
                         <Button variant="ghost" onClick={() => handleSort('category')}>
-                            Category {renderSortIcon('category')}
+                            <span className="hidden sm:inline">Category</span>
+                            <span className="sm:hidden">Cat.</span>
+                            {renderSortIcon('category')}
                         </Button>
                     </TableHead>
                     <TableHead>
@@ -199,7 +201,7 @@ export default function TransactionsPage() {
                             Type {renderSortIcon('type')}
                         </Button>
                     </TableHead>
-                    <TableHead>Notes</TableHead>
+                    <TableHead className="hidden md:table-cell">Notes</TableHead>
                     <TableHead>
                         <Button variant="ghost" onClick={() => handleSort('date')}>
                             Date {renderSortIcon('date')}
@@ -220,9 +222,9 @@ export default function TransactionsPage() {
                         <TableCell>
                         <Badge variant={getBadgeVariant(tx.type)} className="capitalize">{tx.type}</Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{tx.notes || '-'}</TableCell>
+                        <TableCell className="hidden md:table-cell text-muted-foreground">{tx.notes || '-'}</TableCell>
                         <TableCell>
-                        {tx.date ? format(new Date(tx.date.seconds * 1000), 'MMM d, yyyy') : 'N/A'}
+                        {tx.date ? format(new Date(tx.date.seconds * 1000), 'MMM d, yy') : 'N/A'}
                         </TableCell>
                         <TableCell className={cn(
                         "text-right font-mono",

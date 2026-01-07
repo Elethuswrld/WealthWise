@@ -64,7 +64,7 @@ export default function DashboardPage() {
         animate="visible"
         variants={containerVariants}
     >
-        <motion.div variants={itemVariants} className="flex flex-wrap items-center justify-between gap-4">
+        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-4">
             <div>
                 <h1 className="text-2xl md:text-3xl font-bold font-headline">
                     Welcome, {user?.displayName || 'User'}!
@@ -73,7 +73,7 @@ export default function DashboardPage() {
                     Here&apos;s your financial overview for this month.
                 </p>
             </div>
-            <div className='flex items-center gap-2'>
+            <div className='flex items-center gap-2 self-end sm:self-center'>
                 {financialSnapshot && <AiInsights data={financialSnapshot} />}
                 <AddDataDialog />
             </div>
