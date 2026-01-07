@@ -21,11 +21,12 @@ import EmptyState from '@/components/empty-state';
 import { Repeat, MoreHorizontal, Trash2, Pencil } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { deleteTransaction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 const formatCurrency = (amount: number) => {
@@ -59,6 +60,7 @@ export default function TransactionsPage() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [filter, setFilter] = useState('all');
 
   const transactionsQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -66,6 +68,13 @@ export default function TransactionsPage() {
   }, [firestore, user]);
 
   const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
+  
+  const filteredTransactions = useMemo(() => {
+    if (!transactions) return [];
+    if (filter === 'all') return transactions;
+    return transactions.filter((tx) => tx.type === filter);
+  }, [transactions, filter]);
+
 
   const handleEdit = (transaction: WithId<Transaction>) => {
     setDialogData({ transaction });
@@ -111,10 +120,18 @@ export default function TransactionsPage() {
         <CardHeader>
           <CardTitle>All Transactions</CardTitle>
           <CardDescription>
-            Browse through all your recorded transactions.
+            Browse and filter through all your recorded transactions.
           </CardDescription>
         </CardHeader>
         <CardContent>
+            <Tabs value={filter} onValueChange={setFilter} className="mb-4">
+                <TabsList>
+                    <TabsTrigger value="all">All</TabsTrigger>
+                    <TabsTrigger value="income">Income</TabsTrigger>
+                    <TabsTrigger value="expense">Expenses</TabsTrigger>
+                    <TabsTrigger value="investment">Investments</TabsTrigger>
+                </TabsList>
+            </Tabs>
           {isLoading ? (
             <div className="space-y-2">
                 {Array.from({ length: 5 }).map((_, i) => (
@@ -126,7 +143,7 @@ export default function TransactionsPage() {
                     </div>
                 ))}
             </div>
-          ) : transactions && transactions.length > 0 ? (
+          ) : filteredTransactions && filteredTransactions.length > 0 ? (
             <Table>
                 <TableHeader>
                 <TableRow>
@@ -139,7 +156,7 @@ export default function TransactionsPage() {
                 </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {transactions.map((tx) => (
+                    {filteredTransactions.map((tx) => (
                     <TableRow key={tx.id}>
                         <TableCell className="font-medium">{tx.category}</TableCell>
                         <TableCell>
@@ -179,8 +196,8 @@ export default function TransactionsPage() {
             </Table>
           ) : (
             <EmptyState 
-                title="No transactions yet"
-                description="Add your first transaction to see your history here."
+                title="No transactions found"
+                description={filter === 'all' ? "Add your first transaction to see your history here." : `You have no transactions of type '${filter}'.`}
                 icon={Repeat}
             />
           )}
