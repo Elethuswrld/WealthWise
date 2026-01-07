@@ -121,6 +121,52 @@
         "investedAmount",
         "currentValue"
       ]
+    },
+    "Goal": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Goal",
+      "type": "object",
+      "description": "Represents a financial goal set by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the goal entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Goal)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the goal (e.g., 'New Car Fund')."
+        },
+        "targetAmount": {
+          "type": "number",
+          "description": "The target amount to be saved for the goal."
+        },
+        "currentAmount": {
+          "type": "number",
+          "description": "The current amount saved towards the goal."
+        },
+        "targetDate": {
+          "type": "string",
+          "description": "The target date to achieve the goal.",
+          "format": "date"
+        },
+        "createdAt": {
+            "type": "string",
+            "description": "Timestamp indicating when the goal was created.",
+            "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "targetAmount",
+        "currentAmount",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -186,8 +232,28 @@
             }
           ]
         }
+      },
+      {
+        "path": "/users/{userId}/goals/{goalId}",
+        "definition": {
+          "entityName": "Goal",
+          "schema": {
+            "$ref": "#/backend/entities/Goal"
+          },
+          "description": "Stores financial goals for a specific user. Only the user can read/write their own goals.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "goalId",
+              "description": "The unique identifier of the goal."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to address the 'permission-denied' error and ensure a secure, scalable, and easily debuggable financial dashboard application ('WealthWise').\n\nAuthorization Independence (CRITICAL): The structure avoids hierarchical authorization dependencies by denormalizing authorization data. All authorization decisions rely solely on `request.auth.uid`.\n\n*   Transactions and PortfolioAssets are stored as subcollections under the `/users/{userId}` path. This implicitly grants the user ownership over these documents, eliminating the need for `get()` calls to verify ownership.\n\nClarity of Intent (Debuggability): The structure explicitly represents ownership through path-based access control (`/users/{userId}/transactions/{transactionId}`). This structure makes the authorization intent immediately clear.\n\nDBAC (No Custom Claims): User roles are not managed. Authorization relies solely on `request.auth.uid`.\n\nQAPs (Rules are not Filters): The design supports secure `list` operations by enforcing consistent security rules across all documents within a collection. Because transaction and portfolio asset data for other users aren't stored in the same collection as one user, it's impossible for a malicious user to list other user's private information.\n\nInvariants: The structure supports data integrity by enforcing ownership via path-based access. Timestamps (e.g., `createdAt` in `User`) are also supported.\n\nStructural Segregation:\n*   User data is stored in `/users/{userId}`, ensuring that all documents in the `users` collection have the same access requirements (only the user themselves can read/write their data).\n*   Transactions and portfolio assets are stored as subcollections under each user's document (`/users/{userId}/transactions/{transactionId}` and `/users/{userId}/portfolio/{assetId}`). This segregates transaction data, ensuring that only the owning user can access their own transaction data.\n\nAccess Modeling:\n*   Private Data: Path-based ownership is used for user data (`/users/{userId}`).\n*   User-Owned Data: Hierarchical paths are used for transactions and portfolio assets (`/users/{userId}/transactions/{transactionId}` and `/users/{userId}/portfolio/{assetId}`).\n\nData Clarity and Predictability:\n*   Explicit State Modeling: The application uses explicit fields like `type` (in Transaction) to represent state, avoiding implicit state derived from multiple fields.\n*   Predictable Schema: The schema avoids dynamic keys.\n*   Radical Consistency: Naming conventions are standardized (e.g., `userId` for user references)."
+    "reasoning": "The Firestore data structure is designed to address the 'permission-denied' error and ensure a secure, scalable, and easily debuggable financial dashboard application ('WealthWise').\n\nAuthorization Independence (CRITICAL): The structure avoids hierarchical authorization dependencies by denormalizing authorization data. All authorization decisions rely solely on `request.auth.uid`.\n\n*   Transactions, PortfolioAssets, and Goals are stored as subcollections under the `/users/{userId}` path. This implicitly grants the user ownership over these documents, eliminating the need for `get()` calls to verify ownership.\n\nClarity of Intent (Debuggability): The structure explicitly represents ownership through path-based access control (`/users/{userId}/transactions/{transactionId}`). This structure makes the authorization intent immediately clear.\n\nDBAC (No Custom Claims): User roles are not managed. Authorization relies solely on `request.auth.uid`.\n\nQAPs (Rules are not Filters): The design supports secure `list` operations by enforcing consistent security rules across all documents within a collection. Because transaction and portfolio asset data for other users aren't stored in the same collection as one user, it's impossible for a malicious user to list other user's private information.\n\nInvariants: The structure supports data integrity by enforcing ownership via path-based access. Timestamps (e.g., `createdAt` in `User`) are also supported.\n\nStructural Segregation:\n*   User data is stored in `/users/{userId}`, ensuring that all documents in the `users` collection have the same access requirements (only the user themselves can read/write their data).\n*   Transactions, portfolio assets, and goals are stored as subcollections under each user's document. This segregates user-specific data, ensuring that only the owning user can access their own data.\n\nAccess Modeling:\n*   Private Data: Path-based ownership is used for user data (`/users/{userId}`).\n*   User-Owned Data: Hierarchical paths are used for transactions, portfolio assets, and goals (`/users/{userId}/...`).\n\nData Clarity and Predictability:\n*   Explicit State Modeling: The application uses explicit fields like `type` (in Transaction) to represent state, avoiding implicit state derived from multiple fields.\n*   Predictable Schema: The schema avoids dynamic keys.\n*   Radical Consistency: Naming conventions are standardized (e.g., `userId` for user references)."
   }
 }

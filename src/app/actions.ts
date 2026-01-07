@@ -3,10 +3,10 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import type { User as FirebaseUser } from 'firebase/auth';
 import {
-  getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs, updateDoc, deleteDoc,
+  getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs, updateDoc, deleteDoc, Timestamp,
 } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
-import type { Asset, Transaction } from '@/lib/types';
+import type { Asset, Goal, Transaction } from '@/lib/types';
 import { generatePersonalizedInsights } from '@/ai/flows/generate-personalized-financial-insights';
 import { dummyAssets, dummyTransactions } from '@/lib/dummy-data';
 import type { FinancialSnapshot } from '@/lib/finance';
@@ -203,6 +203,71 @@ export async function deleteAsset(assetId: string) {
         const docRef = doc(db, `users/${userId}/portfolio`, assetId);
         await deleteDoc(docRef);
 
+        return { success: true };
+    } catch (error: any) {
+        return { error: error.message };
+    }
+}
+
+
+// --- Goal Actions ---
+
+export async function addGoal(formData: FormData) {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return { error: 'User not authenticated' };
+
+    try {
+        const goalId = uuidv4();
+        const targetDate = formData.get('targetDate') as string;
+
+        const newGoalData = {
+            id: goalId,
+            userId,
+            name: formData.get('name') as string,
+            targetAmount: parseFloat(formData.get('targetAmount') as string),
+            currentAmount: parseFloat(formData.get('currentAmount') as string),
+            targetDate: targetDate ? Timestamp.fromDate(new Date(targetDate)) : null,
+            createdAt: serverTimestamp(),
+        };
+
+        const docRef = doc(db, `users/${userId}/goals`, goalId);
+        await setDoc(docRef, newGoalData);
+
+        return { success: true };
+    } catch (error: any) {
+        return { error: error.message };
+    }
+}
+
+export async function updateGoal(goalId: string, formData: FormData) {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return { error: 'User not authenticated' };
+
+    try {
+        const targetDate = formData.get('targetDate') as string;
+        const updatedGoalData = {
+            name: formData.get('name') as string,
+            targetAmount: parseFloat(formData.get('targetAmount') as string),
+            currentAmount: parseFloat(formData.get('currentAmount') as string),
+            targetDate: targetDate ? Timestamp.fromDate(new Date(targetDate)) : null,
+        };
+
+        const docRef = doc(db, `users/${userId}/goals`, goalId);
+        await updateDoc(docRef, updatedGoalData);
+
+        return { success: true };
+    } catch (error: any) {
+        return { error: error.message };
+    }
+}
+
+export async function deleteGoal(goalId: string) {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return { error: 'User not authenticated' };
+
+    try {
+        const docRef = doc(db, `users/${userId}/goals`, goalId);
+        await deleteDoc(docRef);
         return { success: true };
     } catch (error: any) {
         return { error: error.message };

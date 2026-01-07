@@ -128,6 +128,29 @@ service cloud.firestore {
         && incomingData.userId == resource.data.userId;
     }
 
+    /**
+     * Validates a new Goal document on creation.
+     * Enforces that the goal's internal 'userId' and 'id' fields match the
+     * document's path.
+     */
+    function isValidNewGoal(userId, goalId) {
+      let incomingData = request.resource.data;
+      return isOwner(userId)
+        && incomingData.userId == userId
+        && incomingData.id == goalId;
+    }
+
+    /**
+     * Validates a Goal document on update.
+     * Ensures critical relational fields ('id', 'userId') cannot be changed.
+     */
+    function isImmutableGoal(userId) {
+      let incomingData = request.resource.data;
+      return isExistingOwner(userId)
+        && incomingData.id == resource.data.id
+        && incomingData.userId == resource.data.userId;
+    }
+
 
     // ------------------------------------------------------------------------
     // Collection Rules
@@ -177,6 +200,22 @@ service cloud.firestore {
         allow list: if isOwner(userId);
         allow create: if isValidNewPortfolioAsset(userId, assetId);
         allow update: if isImmutablePortfolioAsset(userId);
+        allow delete: if isExistingOwner(userId);
+      }
+      
+      /**
+       * @description Controls access to a user's financial goals.
+       * @path /users/{userId}/goals/{goalId}
+       * @allow (list) A signed-in user lists their own goals: `list /users/user_abc/goals` (auth.uid: `user_abc`).
+       * @allow (create) A signed-in user creates a new goal for themself: `create /users/user_abc/goals/goal_123` with data `{ userId: "user_abc" }` (auth.uid: `user_abc`).
+       * @deny (get) A signed-in user attempts to read another user's goal: `get /users/user_xyz/goals/goal_456` (auth.uid: `user_abc`).
+       * @principle Enforces document ownership within a user-specific subcollection.
+       */
+      match /goals/{goalId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isValidNewGoal(userId, goalId);
+        allow update: if isImmutableGoal(userId);
         allow delete: if isExistingOwner(userId);
       }
     }

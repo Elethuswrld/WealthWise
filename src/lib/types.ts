@@ -28,3 +28,13 @@ export interface Asset {
   investedAmount: number;
   currentValue: number;
 }
+
+export interface Goal {
+    id: string;
+    userId: string;
+    name: string;
+    targetAmount: number;
+    currentAmount: number;
+    targetDate?: Timestamp;
+    createdAt: Timestamp;
+}
